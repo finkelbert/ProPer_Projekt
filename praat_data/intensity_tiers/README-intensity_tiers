@@ -1,0 +1,1 @@
+Folder for intensity tiers from Praat's output analysis.
