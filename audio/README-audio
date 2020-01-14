@@ -1,0 +1,1 @@
+Audio files for Praat's analysis go in this folder.
