@@ -1,16 +1,16 @@
-# TITLE:		Praat's Periodic Power (PPP)
-# INPUT:		Audio files (preferably at least 44.1kHz sample-rate and 16bit PCM).
-# OUTPUT:		Pitch objects, pitch tiers and intensity tiers.
-# NOTES:		This script creates the corresponding Praat objects (see "output") for 
-#				    files in the audio directory ("input"). The extracted parameters in 
-#				    pitch objects and intensity tiers are used in the R code to yield 
-#				    periodic energy curves. The pitch tier object is used for standard 
-#				    F0 information, which can be tweaked in fields of this script's form, 
-#				    and can be manually corrected when the "inspect" option is switched on.
-#IMPORTANT: Before running the script, make sure to replace the 'xxx' in the 
-#           directories with your relevant directory string (either in the script 
-#           or in the prompted form). Also, make sure that your audio files are in 
-#           the "Audio" directory.
+# TITLE:	Praat's Periodic Power (PPP)
+# INPUT:	Audio files (preferably at least 44.1kHz sample-rate and 16bit PCM).
+# OUTPUT:	Pitch objects, pitch tiers and intensity tiers.
+# NOTES:	This script creates the corresponding Praat objects (see "output") for 
+#		files in the audio directory ("input"). The extracted parameters in 
+#		pitch objects and intensity tiers are used in the R code to yield 
+#		periodic energy curves. The pitch tier object is used for standard 
+#		F0 information, which can be tweaked in fields of this script's form, 
+#		and can be manually corrected when the "inspect" option is switched on.
+#IMPORTANT:	Before running the script, make sure to replace the 'xxx' in the 
+#		directories with your relevant directory string (either in the script 
+#		or in the prompted form). Also, make sure that your audio files are in 
+#		the "Audio" directory.
 # AUTHORS:	Aviad Albert and Francesco Cangemi {a.albert / fcangemi} @uni-koeln.de
 
 ####### Input form
