@@ -1,5 +1,5 @@
-# Periogram-Projekt
-#### A workflow for periodic energy extraction using Praat and R  
+# Periogram Projekt
+#### A workflow for periodic energy extraction (with Praat) and usage (with R)  
 *Aviad Albert & Francesco Cangemi*  
 {a.albert/fcangemi}\@uni-koeln.de
 
