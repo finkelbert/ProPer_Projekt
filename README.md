@@ -10,7 +10,7 @@ Copy the Praat script from `1_Praat_script.praat` into a Praat script window (or
 
 We use the pitch objects in Praat to extract the *periodic fraction* of the signal via the strength of the pitch candidates, denoting the strength of similarity in the auto-correlation from 0 to 1. To eventually get the *periodic power*, the periodic fraction is multiplied by the *total power*, which we derive from the intensity tier. To keep things consistent, the parameters that determine Praat's intensity and pitch candidates analysis are "hard-coded" to the script (i.e. their values are given in constant numbers and they don't show up in the form). The parameters that appear in the form can only change Praat's F0 path finding algorithm, which influences Praat's choice of F0 among the given candidates. These can be freely adjusted to optimize F0 detection without affecting the periodic power reading.
 
-The Praat script is based on *mausmooth* (Cangemi 2015), prompting a grouped view of the sound and pitch objects of each item in the list, allowing the user to correct pitch candidates in the pitch object (e.g. octave jumps) before the pitch object and the smoothed pitch tier are saved. This behavior can be switched off in the form by declicking "inspect" (the pitch objects and tiers will be automatically created and saved). 
+The Praat script is based on *mausmooth* (Cangemi & Albert 2016), prompting a grouped view of the sound and pitch objects of each item in the list, allowing the user to correct pitch candidates in the pitch object (e.g. octave jumps) before the pitch object and the smoothed pitch tier are saved. This behavior can be switched off in the form by declicking "inspect" (the pitch objects and tiers will be automatically created and saved). 
 
 ### 2. Import Praat data into R tables (raw_df)
 The R codes in `2_PPP_raw.Rmd` use the *rPraat* package to directly read Praat's objects and tiers and collect all selected parameters into a data table with all the raw data (*raw_df*).
@@ -35,17 +35,17 @@ The codes in `4_PPP_comp.Rmd` are designed to extract quantifiable data using pe
 
 + **AUC**: The area under the periodic energy curve is computed to reflect the periodic *mass*, related to prosodic *prominence*.
 + **CoM**: The center of mass of periodic energy within syllables is extracted. 
-+ **CoG**: The center of gravity of F0 within syllables is extracted (see Barnes et al. 2012).
++ **CoG**: The center of gravity of F0 within syllables is extracted.
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables.
 + **Scaling**: We measure F0 within each syllable at the center of mass of periodic energy (CoM), and we compute *scaling* in terms of the difference in F0 from previous syllable (hence, not applicable for phrase-initial syllables).
 
 ***
 
 #### References
-Albert, Aviad, Francesco Cangemi, and Martine Grice. 2018. Using periodic energy to enrich acoustic representations of pitch in speech: A demonstration. In *Proceedings of the 9th International Conference on Speech Prosody*. [link](https://www.isca-speech.org/archive/SpeechProsody_2018/abstracts/220.html)
+Albert, Aviad, Francesco Cangemi & Martine Grice. 2018. Using periodic energy to enrich acoustic representations of pitch in speech: A demonstration. In *Proceedings of the 9th International Conference on Speech Prosody*. Poznań, Poland. [link](https://www.isca-speech.org/archive/SpeechProsody_2018/abstracts/220.html)
 
-Albert, Aviad, Francesco Cangemi, and Martine Grice. 2019. Can you draw me a question? Winning presentation at the *Prosody Visualization Challenge 2*, ICPhS, Melbourne, Australia. [link](https://www.researchgate.net/publication/335096657_Can_you_draw_me_a_question?channel=doi&linkId=5d4e86644585153e5949fcb7&showFulltext=true)
+Albert, Aviad, Francesco Cangemi & Martine Grice. 2019. Can you draw me a question? Winning presentation at the *Prosody Visualization Challenge 2*. ICPhS, Melbourne, Australia. [link](https://www.researchgate.net/publication/335096657_Can_you_draw_me_a_question?channel=doi&linkId=5d4e86644585153e5949fcb7&showFulltext=true)
 
-Barnes, Jonathan, Nanette Veilleux, Alejna Brugos, and Stefanie Shattuck-Hufnagel. 2012. Tonal center of gravity: A global approach to tonal implementation in a level-based intonational phonology. *Laboratory Phonology* 3 (2): 337-383.
+Cangemi, Francesco & Aviad Albert. 2016. mausmooth: Eyeballing made easy. Poster presentation at *the 7th conference on Tone and Intonation in Europe (TIE)*. Canterbury, UK.
 
-Cangemi, Francesco, Aviad Albert, and Martine Grice. 2019. Modelling intonation: Beyond segments and tonal targets. In *Proceedings of the International Congress of Phonetic Sciences*, Melbourne, Australia. [link](https://www.researchgate.net/publication/335096495_Modelling_intonation_Beyond_segments_and_tonal_targets)
+Cangemi, Francesco, Aviad Albert & Martine Grice. 2019. Modelling intonation: Beyond segments and tonal targets. In *Proceedings of the International Congress of Phonetic Sciences*. Melbourne, Australia. [link](https://www.researchgate.net/publication/335096495_Modelling_intonation_Beyond_segments_and_tonal_targets)
