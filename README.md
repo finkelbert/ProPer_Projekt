@@ -4,6 +4,7 @@
 {a.albert/fcangemi}\@uni-koeln.de
 
 ## Instructions 
+Open the R project `Periogram-Projekt.Rproj` in *RStudio* to manange all the files in this workflow and proceed as follows:
 
 ### 1. Data extraction from Praat (Praat script)
 Copy the Praat script from `1_Praat_script.praat` into a Praat script window (or double-click it to open directly in a Praat script window). Make sure that the directory paths are correct (change directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (preferably PCM with 44.1kHz sample-rate and 16-24 bit depth).
