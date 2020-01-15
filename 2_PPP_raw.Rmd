@@ -1,0 +1,96 @@
+# Praat'sPeriodicPower: Raw (PPP_raw)
+
+```{r clean_start, warning=FALSE}
+rm(list = ls())
+
+## Load required libraries 
+library(rPraat)
+library(stringr)
+```
+
+```{r prepare_raw_df, warning=FALSE}
+## Read and collect Praat data into R tables
+
+##### Intensity (get intensity data)
+files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
+intensity_df <- plyr::ldply(files_intensity, function(f){  
+  filename <- str_match(f,"//(.*)\\.IntensityTier")
+  file <- filename[,2] 
+  intensitier <- it.read(f)
+  time = round(intensitier$t,3)*1000
+  data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,3))
+})
+
+##### Full-time (get the full time of the file from the intensity tier)
+full_time_df <- plyr::ldply(files_intensity, function(f){  
+  filename <- str_match(f,"//(.*)\\.IntensityTier")
+  file <- filename[,2] 
+  it <- it.read(f)
+  time <- seq(it[["tmin"]], it[["tmax"]], 0.001) * 1000
+  data.frame(file, t=as.integer(as.character(time)))
+})
+
+##### F0: Pitch Tier (get the smooth F0 curve)
+files_pt_clean <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
+f0_smooth_df <- plyr::ldply(files_pt_clean, function(f){  
+  filename <- str_match(f,"//(.*)\\.PitchTier")
+  file <- filename[,2] 
+  pt <- pt.read(f)
+  time = round(pt[["t"]],3)*1000
+  f0 = pt[["f"]]
+  data.frame(file, t=as.integer(as.character(time)), f0_smooth=round(f0,2)) 
+})
+
+##### Pitch object: Strength (i.e. the periodic fraction from Praat's autocorrelation) and frequency of selected pitch candidates; rowmax = highest strength value within the frequency range (up to 'pitch_ceiling'); row1 = Praat's path finder choice for F0 candidates
+## (This may take time to process!!!)
+files_pitch_object <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
+pitch_object_df <- plyr::ldply(files_pitch_object, function(f){  
+  filename <- str_match(f,"//(.*)\\.Pitch")
+  file <- filename[,2] 
+  pitch_object <- pitch.read(f)
+  time <- round(pitch_object$t,3)*1000
+  pitch_ceiling <- 1000 #fixed to periods up to 1000Hz
+  strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
+  f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
+  f0_row1[which(f0_row1==0)] <- NA
+  strengthArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["strengthArray"]]), 2, function(x) ifelse(x==0,NA,x))
+  freqArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["frequencyArray"]]), 2, function(x) ifelse(x==0,NA,x))
+  zero_one_freqs <- apply(freqArray, 2, function(x) ifelse(x>pitch_ceiling, 0, 1))
+  strength_limited <- strengthArray
+  strength_limited[, -1] <- mapply(`*`, strengthArray[, -1], zero_one_freqs[, -1])
+  strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
+  strength_rowmax[is.infinite(strength_rowmax)] <- 0
+  data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,5), f0_row1=round(f0_row1,1), strength_rowmax=round(strength_rowmax,5))
+})
+
+##### TextGrids are optional! By default, TextGrids are expected with a single interval tier, 'seg', demarcating segments/syllables/words...
+files_textgrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
+if(length(files_textgrid)>0) tg_df <- plyr::ldply(files_textgrid, function(f){
+  filename <- str_match(f,"//(.*)\\.TextGrid")
+  file <- filename[,2]
+  tg <- tg.read(f, encoding = "auto")
+  df_TG <- data.frame(tg$seg)
+  t1 <- round(df_TG$t1,3)*1000
+  t2 <- round(df_TG$t2,3)*1000
+  t_mid <- round((t1+t2)/2)
+  label <- df_TG$label
+  data.frame(file, t=as.integer(as.character(t1)), interval_start=as.integer(as.character(t1)), interval_mid=as.integer(as.character(t_mid)), interval_end=as.integer(as.character(t2)), label)
+})
+if(length(files_textgrid)>0) tg_df$label <- levels(tg_df$label)[as.numeric(tg_df$label)]
+
+##### Combine all data
+raw_df <- left_join(full_time_df, f0_smooth_df, by = c("file", "t"))
+raw_df <- left_join(raw_df, intensity_df, by = c("file", "t"))
+raw_df <- left_join(raw_df, pitch_object_df, by = c("file", "t"))
+if(length(files_textgrid)>0) raw_df <- left_join(raw_df, tg_df, by = c("file", "t"))
+
+##### Calculate and add the total-power and the periodic-power vectors
+raw_df <- mutate(group_by(raw_df,file),
+                  total_power = 4e-10 * 10^(intensity / 10),
+                  periodic_power_freq_lim = total_power * strength_rowmax,
+                  periodic_power_f0 = total_power * strength_row1
+                  )
+
+##### Write the raw data
+write.csv(raw_df, "data_tables/raw_df.csv", row.names=FALSE)
+```

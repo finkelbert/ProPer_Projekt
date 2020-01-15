@@ -1,0 +1,200 @@
+# Praat'sPeriodicPower: Computations (PPP_comp)
+
+```{r clean_start}
+rm(list = ls())
+
+## Load required libraries 
+library(ggplot2)
+library(dplyr)
+library(Cairo)
+```
+
+```{r read_main_df, warning=FALSE}
+comp_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
+```
+
+The following are a set of functions that are based on boundary detection and computation within and across resulting intervals. We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
+
+```{r fun_detector, warning=FALSE, echo=FALSE}
+
+### Find boundaries (1st derive-based)
+# boundetect <- which(
+#   # zero-crossing derive 1
+#   (comp_df$smog_pp_1st_derive > 0 &
+#      lag(comp_df$smog_pp_1st_derive,1) < 0 &
+#      comp_df$smog_pp_1st_derive < lead(comp_df$smog_pp_1st_derive,10) &
+#      comp_df$smog_pp_1st_derive < lead(comp_df$smog_pp_1st_derive,20)) |
+#     # zero post negative (e.g. last)
+#     (round(comp_df$smog_pp_gnrl_rel,2) > 0 &
+#        round((lead(comp_df$smog_pp_gnrl_rel,1)),2) == 0) |
+#     # zero pre negative (e.g. first)
+#     (round(comp_df$smog_pp_gnrl_rel,2) > 0 &
+#        round(lag(comp_df$smog_pp_gnrl_rel,1),2) == 0))
+
+### Find boundaries (2nd derive-based)
+boundetect <- which(
+  # peak derive 2
+  (comp_df$smog_pp_2nd_derive > 0.2 & #0.02, 0.06, 0.2
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,10) &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,20) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,1) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,10) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20)) |
+    (comp_df$smog_pp_1st_derive > 0.005 &
+     comp_df$smog_pp_2nd_derive > -1 &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,10) &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,20) &
+     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,30) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,1) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,10) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20) &
+     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,30)))
+
+### Cheat boundaries
+# boundetect <- which(!is.na(comp_df$interval_bounds))
+
+comp_df$per_fluct_bound[boundetect] <- comp_df$t[boundetect]
+
+### Find intervals
+boundaries <- c(comp_df$t[boundetect],0)
+l <- length(boundaries)
+filenames <- c(as.character(comp_df$file[boundetect]),"")
+intervals <- data.frame(
+  file = filenames[1:(l-1)],
+  fileEnd = filenames[2:l],
+  start = boundaries[1:(l-1)],
+  end = boundaries[2:l],
+  stringsAsFactors = FALSE
+)
+intervals <- intervals[(intervals$file == intervals$fileEnd),]
+intervals$fileEnd <- NULL
+
+### Interval calculation function
+intervalKalk <- function(fn,fieldName) function(interval) {
+  selection <- ((comp_df$t>=interval$start) &
+                  (comp_df$t<interval$end) &
+                  (comp_df$file == interval$file))
+  comp_df[selection,] %>% fn() %>% 
+    (function(x) {
+      comp_df[selection, fieldName] <<- x
+      x
+    })
+}
+
+### Mapping function
+markMap <- function(.x,.f,...) {
+  indices <- (1:(dim(.x)[1]))
+  indices %>%
+    purrr::map(function(x) { .f(.x[x,]) }) %>%
+    unlist()
+  .x
+}
+
+### Caculation functions (specific)
+AUC <- function(df) {
+  x <- round(sum(df$smog_pp_gnrl_rel,na.rm = T),1) #smog_pp_gnrl
+  x
+}
+
+CoM <- function(df) {
+  round(sum(df$smog_pp_gnrl_rel*df$t,na.rm=T) / sum(df$smog_pp_gnrl_rel,na.rm=T))
+}
+
+CoG <- function(df) {
+  f0Floor <- min(df$f0_smooth_interp, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
+  round(sum((df$f0_smooth_interp-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth_interp-f0Floor,na.rm=T))
+}
+
+f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
+f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
+PERatCoG <- function(df) round(df$smog_pp_gnrl_rel[df$t == round(df$CoG)],4)
+PERatCoM <- function(df) round(df$smog_pp_gnrl_rel[df$t == round(df$CoM)],4)
+
+synchrony <- function(df) {
+  round(df$CoG - df$CoM)
+}
+
+### Map to main (for specific functions)
+intervals %>%
+  markMap(intervalKalk(AUC,"AUC")) %>%
+  markMap(intervalKalk(CoM,"CoM")) %>%
+  markMap(intervalKalk(CoG,"CoG")) %>%
+  markMap(intervalKalk(f0atCoM,"f0atCoM")) %>%
+  markMap(intervalKalk(f0atCoG,"f0atCoG")) %>%
+  markMap(intervalKalk(PERatCoG,"PERatCoG")) %>%
+  markMap(intervalKalk(PERatCoM,"PERatCoM")) %>%
+  markMap(intervalKalk(synchrony,"synchrony"))
+  
+
+f0atCoM_list <- comp_df$f0atCoM[boundetect]
+realFluct_i <- which(!is.na(f0atCoM_list))
+relevantFluct_i <- realFluct_i[-1]
+scalist <- diff(f0atCoM_list[realFluct_i])
+scalingList <- f0atCoM_list
+scalingList[relevantFluct_i] <- scalist
+scalingList[1] <- NA  
+comp_df$scaling[boundetect] <- scalingList
+
+comp_df <- mutate(group_by(comp_df,file),
+                  scaling = ifelse((!is.na(per_fluct_bound) & per_fluct_bound>min(per_fluct_bound, na.rm = T) & !is.na(f0atCoM)), scaling, NA),
+                  AUC_rel = round(AUC / (round(round(sum(smog_pp_gnrl_rel,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
+                  CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))),CoM,NA),
+                  CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))),CoG,NA)
+)
+
+```
+
+```{r save_plot, warning=FALSE}
+
+files <- comp_df$file
+files <- files[!duplicated(files)==TRUE]
+sel_file <- files[1] #"xxx" 
+single_stim <- dplyr::filter(comp_df, file==sel_file)
+
+plot_comp <-
+  ggplot(single_stim, aes(x=t)) +
+##### F0 curves
+  ## smooth
+  # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
+  ## interpolated
+  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
+  ## periogram_general (smog_pp_gnrl)
+  geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp_gnrl_rel, size=single_stim$smog_pp_gnrl_rel*3.5) +
+##### Periodic energy
+  ## general periodic energy (smog_pp_gnrl)
+  geom_line(aes(y=smog_pp_gnrl_rel*f0_stim_min),color="red", alpha=.5, size=.5) +
+#### boundaries
+  geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.5) +
+  geom_vline(aes(xintercept=single_stim$per_fluct_bound), linetype="solid", color="red", size=.5, alpha=.3) + 
+  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=60, yend=PERatCoM*f0_stim_min), position = "dodge", color="red", size=.3, alpha=.8, linetype = "longdash", lineend = "round") + 
+  geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG, yend=PERatCoG*f0_stim_min), position = "dodge", color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round") +
+  geom_segment(aes(x=f0peak_t, xend=f0peak_t, y=f0_stim_max-10, yend=f0_stim_max+10), position = "dodge", color="#E066FF", size=1, alpha=.8, linetype = "solid", lineend = "round") +
+#### annotations
+  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+30, label=label, check_overlap=T), color="black", size=7, family= "Times") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=50, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=50, label=round(scaling)), check_overlap=T, color="black", size=4.2, family= "Helvetica") + 
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=30, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=30, label=round(synchrony)), check_overlap=T, color="black", size=4.2, family= "Helvetica") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=10, label="Mass (relative AUC):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=10, label=AUC_rel), check_overlap=T, color="black", size=4.2, family= "Helvetica") +
+  geom_text(aes(x=f0peak_t, y=f0_stim_max-15, label="F0 peak"), check_overlap=T, color="#E066FF", size=3, family= "Helvetica") +
+#### legendary
+  geom_segment(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, y=65, yend=85), color="red", size=.3, alpha=.8, linetype = "dashed", lineend = "round", position = "dodge") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=75), label="CoM", color="red", alpha=1, size=4.2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_segment(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, y=90, yend=110), color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round", position = "dodge") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=100), label="CoG", color="blue", alpha=1, size=4.2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+#### plot stuff
+  xlim(-150, max(single_stim$per_fluct_bound, na.rm = T)+100) +
+  # facet_wrap(~file, scales = "free", ncol = 2) + #, scales = "free"
+  theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
+print(plot_comp)
+# ggsave(plot_comp, file=paste0("plots/",sel_file,"_plot_comp.pdf"),device=cairo_pdf)
+
+```
+
+```{r write_comp_df}
+## Write the computation data file
+write.csv(comp_df, "data_tables/comp_df.csv", row.names=FALSE)
+```
