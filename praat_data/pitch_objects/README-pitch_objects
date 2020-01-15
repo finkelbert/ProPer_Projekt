@@ -1,1 +1,0 @@
-Folder for pitch objects from Praat's output analysis.
