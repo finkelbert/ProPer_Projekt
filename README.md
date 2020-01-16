@@ -4,10 +4,10 @@
 {a.albert/fcangemi}\@uni-koeln.de
 
 ## Instructions 
-Open the R project `Periogram-Projekt.Rproj` in *RStudio* to manange all the files in this workflow and proceed as follows:
+If you have *RStudio*, it is recommended to open the R project `Periogram-Projekt.Rproj` in order to manange all the files in this workflow (otherwise use the individual .Rmd files within the folder) and proceed as follows:
 
 ### 1. Data extraction from Praat (Praat script)
-Copy the Praat script from `1_Praat_script.praat` into a Praat script window (or double-click it to open directly in a Praat script window). Make sure that the directory paths are correct (change directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (preferably PCM with 44.1kHz sample-rate and 16-24 bit depth).
+Copy the Praat script from `1_Praat_script.praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (preferably PCM with 44.1kHz sample-rate and 16-24 bit depth).
 
 We use the pitch objects in Praat to extract the *periodic fraction* of the signal via the strength of the pitch candidates, denoting the strength of similarity in the auto-correlation from 0 to 1. To eventually get the *periodic power*, the periodic fraction is multiplied by the *total power*, which we derive from the intensity tier. To keep things consistent, the parameters that determine Praat's intensity and pitch candidates analysis are "hard-coded" to the script (i.e. their values are given in constant numbers and they don't show up in the form). The parameters that appear in the form can only change Praat's F0 path finding algorithm, which influences Praat's choice of F0 among the given candidates. These can be freely adjusted to optimize F0 detection without affecting the periodic power reading.
 
@@ -23,13 +23,13 @@ The codes in `3_PPP_main.Rmd` result in the visualization paradigm that we call 
 
 The first part of `3_PPP_main` requires/allows interaction with a few important variables, before it creates new data based on these determinations:
 
-+ To achieve a functionality that resembles Praat's voicing threshold in the pitch analysis settings, effectively eliminating noise from the lower values of the HNR/periodic fraction, we set a "strengthresh" value, which can be as high as 50% of the strength scale (0.5).
-+ The periodic power is needs to be log-transformed. We set a "silence threshold" in the log function by determining the "per_floor" value, which will determine the zero value of the log scale (this threshold is usually under 5% of the exponential scale).
-+ By entering "stim" or "data" (or "speaker" if added) in the "stim_data" variable, we can determine if the above-mentioned thresholds are calculated relative to each stimulus/file ("stim"), each speaker ("speaker") or, in the case of a single recording session with a single speaker, relative to the whole data set. 
-+ The log periodic power is eventually smoothed by a local polynomial regression fitting (loess). The amount of smoothing is determined in the "per_smooth_span" variable.
-+ For *periograms*, we create an interpolated version of the F0 curve. We then fit a smooth curve to the interpolated F0. The amount of this smoothing can be changed using the "f0_smooth_span" variable.
++ **strengthresh**: To achieve a functionality that resembles Praat's voicing threshold in the pitch analysis settings, effectively eliminating noise from the lower values of the HNR/periodic fraction, we set a "strengthresh" value, which can be as high as 50% of the strength scale (0.5).
++ **per_floor**: The periodic power still needs to be log-transformed. We set a "silence threshold" in the log function by determining the "per_floor" value, which will determine the zero value of the log scale (this threshold is usually under 5% of the exponential scale).
++ **rel_to**: By entering "stim" or "data" (or "speaker" if added) in the "stim_data" variable, we can determine if the above-mentioned thresholds are calculated relative to each stimulus/file ("stim"), each speaker ("speaker") or, in the case of a single recording session with a single speaker, relative to the whole data set. 
++ **per_smooth_span**: The log periodic power is eventually smoothed by a local polynomial regression fitting (loess). The amount of smoothing is determined in the "per_smooth_span" variable.
++ **f0_smooth_span**: For *periograms*, we create an interpolated version of the F0 curve. We then fit a smooth curve to the interpolated F0. The amount of this smoothing can be changed using the "f0_smooth_span" variable.
 
-Note that at the end of this process we have two final periodic enrgy curves: "smog_pp_gnrl(_rel)" and "smog_pp_f0(_rel)" (versions with '_rel' denote a relative scale from 0 to 1). The former (smog_pp_gnrl), which we currently consider as the default, or "general", is unaffected by Praat's path finding algorithm and its choice of F0, and it can be fine-tuned here via the "strengthresh" variable similarly to Praat's voicing threshold. The latter (smog_pp_f0) reflects the strength values of the F0 pitch candidates (thus, "F0-related"), which depend on the settings of the path finding algorithm in Praat (as well as on manual corrections). It has the ability to prefer harmonically resolved candidates (thus eliminating noise from strong harmonically unrelated candidates, if they happen to appear within the F0 range), and it may also favor a low frequency candidate with low strength value over a stronger and higher harmonically related partial. In any case, they are almost identical when they are both with low threshold settings, so this ends up being mostly a choice between slightly different fine-tunes.
+Use the plots at the end of the file to inspect the data and adjust the thresholds before saving the *main_df* table.
 
 ### 4. Perform computations on the data (comp_df)
 The codes in `4_PPP_comp.Rmd` are designed to extract quantifiable data using periodic energy (see Cangemi et al. 2019). It starts with a boundary detector to locate the syllabic boundaries. We use an automatic method, based on 1st and 2nd derivatives of the periodic energy curve to locate relevant minima. The following computations are performed within and across the resulting intervals:
@@ -39,6 +39,8 @@ The codes in `4_PPP_comp.Rmd` are designed to extract quantifiable data using pe
 + **CoG**: The center of gravity of F0 within syllables is extracted.
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables.
 + **Scaling**: We measure F0 within each syllable at the center of mass of periodic energy (CoM), and we compute *scaling* in terms of the difference in F0 from previous syllable (hence, not applicable for phrase-initial syllables).
+
+Again, use the plot at the end of the file to inspect the data and adjust parameters before saving the *comp_df* table.
 
 ***
 
