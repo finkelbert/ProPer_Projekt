@@ -13,27 +13,15 @@ library(Cairo)
 comp_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 ```
 
-The following are a set of functions that are based on boundary detection and computation within and across resulting intervals. We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
+The following are a set of functions that are based on boundary detection (*bound_detector* chunk) and computation within and across resulting intervals (*run_fun* chunk). We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
 
-```{r fun_detector, warning=FALSE, echo=FALSE}
+```{r bound_detector, warning=FALSE, echo=FALSE}
 
-### Find boundaries (1st derive-based)
-# boundetect <- which(
-#   # zero-crossing derive 1
-#   (comp_df$smog_pp_1st_derive > 0 &
-#      lag(comp_df$smog_pp_1st_derive,1) < 0 &
-#      comp_df$smog_pp_1st_derive < lead(comp_df$smog_pp_1st_derive,10) &
-#      comp_df$smog_pp_1st_derive < lead(comp_df$smog_pp_1st_derive,20)) |
-#     # zero post negative (e.g. last)
-#     (round(comp_df$smog_pp_gnrl_rel,2) > 0 &
-#        round((lead(comp_df$smog_pp_gnrl_rel,1)),2) == 0) |
-#     # zero pre negative (e.g. first)
-#     (round(comp_df$smog_pp_gnrl_rel,2) > 0 &
-#        round(lag(comp_df$smog_pp_gnrl_rel,1),2) == 0))
+detetor_type <- "auto" # detetor_type <- c("auto","man") 
 
-### Find boundaries (2nd derive-based)
-boundetect <- which(
-  # peak derive 2
+### Find boundaries: automatic detection ("auto")
+if(detetor_type == "auto") boundetect <- which(
+# locate positive peaks in the 2nd derivative
   (comp_df$smog_pp_2nd_derive > 0.2 & #0.02, 0.06, 0.2
      comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
      comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,10) &
@@ -41,6 +29,7 @@ boundetect <- which(
      comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,1) &
      comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,10) &
      comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20)) |
+# or near-positive 2nd derivative peaks with positive 1st derivative values
     (comp_df$smog_pp_1st_derive > 0.005 &
      comp_df$smog_pp_2nd_derive > -1 &
      comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
@@ -52,10 +41,15 @@ boundetect <- which(
      comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20) &
      comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,30)))
 
-### Cheat boundaries
-# boundetect <- which(!is.na(comp_df$interval_bounds))
+### Find boundaries: manual detection ("man")
+# force boundaries to annotated landmarks
+if(detetor_type == "man") boundetect <- which(!is.na(comp_df$interval_bounds))
 
 comp_df$per_fluct_bound[boundetect] <- comp_df$t[boundetect]
+
+```
+
+```{r run_fun, warning=FALSE, echo=FALSE}
 
 ### Find intervals
 boundaries <- c(comp_df$t[boundetect],0)
@@ -146,7 +140,7 @@ comp_df <- mutate(group_by(comp_df,file),
 
 ```
 
-```{r save_plot, warning=FALSE}
+```{r plot, warning=FALSE}
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
