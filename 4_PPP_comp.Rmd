@@ -16,30 +16,38 @@ comp_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all =
 The following are a set of functions that are based on boundary detection (*bound_detector* chunk) and computation within and across resulting intervals (*run_fun* chunk). We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
 
 ```{r bound_detector, warning=FALSE, echo=FALSE}
-
+#### Choose automatic or manual detection
 detetor_type <- "auto" # detetor_type <- c("auto","man") 
+
+comp_df <- mutate(group_by(comp_df,file),
+                  ## get 1st and 2nd derivatives from periodic energy
+                  smog_pp_1st_der =  ifelse(!is.na(smog_pp), diff(lag(smog_pp,1)), 0),
+                  smog_pp_1st_der = round(predict(loess(smog_pp_1st_der~t, data=comp_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7),
+                  smog_pp_2nd_der =  ifelse(!is.na(smog_pp_1st_der), diff(lag(smog_pp_1st_der,1))*1000, 0),
+                  smog_pp_2nd_der = round(predict(loess(smog_pp_2nd_der~t, data=comp_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7)
+)
 
 ### Find boundaries: automatic detection ("auto")
 if(detetor_type == "auto") boundetect <- which(
 # locate positive peaks in the 2nd derivative
-  (comp_df$smog_pp_2nd_derive > 0.2 & #0.02, 0.06, 0.2
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,10) &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,20) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,1) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,10) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20)) |
+  (comp_df$smog_pp_2nd_der > 0.2 & #0.02, 0.06, 0.2
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,1) &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,10) &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,20) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,1) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,10) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,20)) |
 # or near-positive 2nd derivative peaks with positive 1st derivative values
-    (comp_df$smog_pp_1st_derive > 0.005 &
-     comp_df$smog_pp_2nd_derive > -1 &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,1) &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,10) &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,20) &
-     comp_df$smog_pp_2nd_derive > lag(comp_df$smog_pp_2nd_derive,30) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,1) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,10) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,20) &
-     comp_df$smog_pp_2nd_derive > lead(comp_df$smog_pp_2nd_derive,30)))
+    (comp_df$smog_pp_1st_der > 0.005 &
+     comp_df$smog_pp_2nd_der > -1 &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,1) &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,10) &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,20) &
+     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,30) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,1) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,10) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,20) &
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,30)))
 
 ### Find boundaries: manual detection ("man")
 # force boundaries to annotated landmarks
@@ -88,12 +96,12 @@ markMap <- function(.x,.f,...) {
 
 ### Caculation functions (specific)
 AUC <- function(df) {
-  x <- round(sum(df$smog_pp_gnrl_rel,na.rm = T),1) #smog_pp_gnrl
+  x <- round(sum(df$smog_pp_rel,na.rm = T),1) #smog_pp
   x
 }
 
 CoM <- function(df) {
-  round(sum(df$smog_pp_gnrl_rel*df$t,na.rm=T) / sum(df$smog_pp_gnrl_rel,na.rm=T))
+  round(sum(df$smog_pp_rel*df$t,na.rm=T) / sum(df$smog_pp_rel,na.rm=T))
 }
 
 CoG <- function(df) {
@@ -103,8 +111,8 @@ CoG <- function(df) {
 
 f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
 f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
-PERatCoG <- function(df) round(df$smog_pp_gnrl_rel[df$t == round(df$CoG)],4)
-PERatCoM <- function(df) round(df$smog_pp_gnrl_rel[df$t == round(df$CoM)],4)
+PERatCoG <- function(df) round(df$smog_pp_rel[df$t == round(df$CoG)],4)
+PERatCoM <- function(df) round(df$smog_pp_rel[df$t == round(df$CoM)],4)
 
 synchrony <- function(df) {
   round(df$CoG - df$CoM)
@@ -133,7 +141,7 @@ comp_df$scaling[boundetect] <- scalingList
 
 comp_df <- mutate(group_by(comp_df,file),
                   scaling = ifelse((!is.na(per_fluct_bound) & per_fluct_bound>min(per_fluct_bound, na.rm = T) & !is.na(f0atCoM)), scaling, NA),
-                  AUC_rel = round(AUC / (round(round(sum(smog_pp_gnrl_rel,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
+                  AUC_rel = round(AUC / (round(round(sum(smog_pp_rel,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
                   CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))),CoM,NA),
                   CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))),CoG,NA)
 )
@@ -144,21 +152,20 @@ comp_df <- mutate(group_by(comp_df,file),
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
-sel_file <- files[1] #"xxx" 
+sel_file <- files[1] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
 
 plot_comp <-
   ggplot(single_stim, aes(x=t)) +
 ##### F0 curves
-  ## smooth
+## smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
-  ## interpolated
+## interpolated
   # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
-  ## periogram_general (smog_pp_gnrl)
-  geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp_gnrl_rel, size=single_stim$smog_pp_gnrl_rel*3.5) +
-##### Periodic energy
-  ## general periodic energy (smog_pp_gnrl)
-  geom_line(aes(y=smog_pp_gnrl_rel*f0_stim_min),color="red", alpha=.5, size=.5) +
+## periogram (smog_pp)
+  geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp_rel, size=single_stim$smog_pp_rel*3.5) +
+##### Periodic energy (smog_pp)
+  geom_line(aes(y=smog_pp_rel*f0_stim_min),color="red", alpha=.5, size=.5) +
 #### boundaries
   geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.5) +
   geom_vline(aes(xintercept=single_stim$per_fluct_bound), linetype="solid", color="red", size=.5, alpha=.3) + 

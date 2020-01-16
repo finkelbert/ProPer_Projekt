@@ -35,7 +35,7 @@ per_smooth_span <- 0.05
 #
 ########--- Interpolated F0 curve loess smooth span (0.01 -- 0.2) 
 ## span setting for the interpolated F0 loess smooth curve fitting
-f0_smooth_span <- 0.01
+f0_smooth_span <- 0.08
 #
 # find maximum values for all data
 max_data_per_power <- round(max(main_df$periodic_power, na.rm=T),7)
@@ -86,11 +86,6 @@ main_df <- mutate(group_by(main_df,file),
                   f0_stim_max = max(f0_smooth, na.rm=T),
                   f0_stim_min = min(f0_smooth, na.rm=T),
                   f0peak_t = ifelse(f0_smooth==f0_stim_max, t, NA),
-                  ## get 1st and 2nd derivatives from periodic energy
-                  smog_pp_1st_derive =  ifelse(!is.na(smog_pp), diff(lag(smog_pp,1)), 0),
-                  smog_pp_1st_derive = round(predict(loess(smog_pp_1st_derive~t, data=main_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7),
-                  smog_pp_2nd_derive =  ifelse(!is.na(smog_pp_1st_derive), diff(lag(smog_pp_1st_derive,1))*1000, 0),
-                  smog_pp_2nd_derive = round(predict(loess(smog_pp_2nd_derive~t, data=main_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7),
                   per_fluct_bound = NA,
                   scaling = NA
 )
@@ -108,9 +103,9 @@ plot_all <-
 ## smooth
   #geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) + 
 ## interpolated
-  #geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) + 
+  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
 ## periogram (smog_pp)
-  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=main_df$smog_pp_rel, size=main_df$smog_pp_rel*3) + 
+  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=main_df$smog_pp_rel, size=main_df$smog_pp_rel*3) +
 ####### Periodic energy (smog_pp)
   geom_line(aes(y=smog_pp_rel*f0_stim_min),color="gold", alpha=.5, size=1) + 
 ####### TextGrids boundaries and labels (comment out if not available)
@@ -147,7 +142,7 @@ plot1 <-
 ## interpolated F0 (from R)
   # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
 ## periogram (smog_pp)
-  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=single_stim$smog_pp_rel, size=single_stim$smog_pp_rel*5) + 
+  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=single_stim$smog_pp_rel, size=single_stim$smog_pp_rel*5) +
 ########## Power/intensity
 ## intensity
   #geom_line(aes(y=int_rel*f0_stim_min),color="green", alpha=.2, size=.5) + 
@@ -155,7 +150,7 @@ plot1 <-
   geom_line(aes(y=total_power_rel*f0_stim_min),color="cornflowerblue", alpha=.5, size=.5) + 
   ########## Periodic fraction (strength/HNR)
 ## raw strength (before "strengthresh")
-  geom_line(aes(y=strength_rowmax*f0_stim_min), color="green", alpha=.3, size=.5) +
+  # geom_line(aes(y=strength_rowmax*f0_stim_min), color="green", alpha=.3, size=.5) +
 ## processed strength  (after "strengthresh")
   geom_line(aes(y=strength_general*f0_stim_min), color="tomato", alpha=.5, size=.5) +
 ########## Periodic power (total power * periodic fraction)
