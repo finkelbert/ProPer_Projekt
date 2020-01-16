@@ -6,6 +6,7 @@ rm(list = ls())
 ## Load required libraries 
 library(rPraat)
 library(stringr)
+library(dplyr)
 ```
 
 ```{r prepare_raw_df, warning=FALSE}
