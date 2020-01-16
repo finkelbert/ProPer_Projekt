@@ -1,4 +1,4 @@
-# Praat'sPeriodicPower: Computations (PPP_comp)
+# Praat'sPeriodicPower: Computations (PPP_comp) 
 
 ```{r clean_start}
 rm(list = ls())
