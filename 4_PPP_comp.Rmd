@@ -103,8 +103,8 @@ CoM <- function(df) {
 }
 
 CoG <- function(df) {
-  f0Floor <- min(df$f0_smooth_interp, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
-  round(sum((df$f0_smooth_interp-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth_interp-f0Floor,na.rm=T))
+  f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
+  round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
 }
 
 f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
