@@ -88,8 +88,7 @@ if(length(files_textgrid)>0) raw_df <- left_join(raw_df, tg_df, by = c("file", "
 ##### Calculate and add the total-power and the periodic-power vectors
 raw_df <- mutate(group_by(raw_df,file),
                   total_power = 4e-10 * 10^(intensity / 10),
-                  periodic_power_freq_lim = total_power * strength_rowmax,
-                  periodic_power_f0 = total_power * strength_row1
+                  periodic_power = total_power * strength_rowmax
                   )
 
 ##### Write the raw data
