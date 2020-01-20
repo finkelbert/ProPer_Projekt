@@ -174,24 +174,24 @@ plot_comp <-
   geom_segment(aes(x=f0peak_t, xend=f0peak_t, y=f0_stim_max-10, yend=f0_stim_max+10), position = "dodge", color="#E066FF", size=1, alpha=.8, linetype = "solid", lineend = "round") +
 #### annotations
   geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+30, label=label, check_overlap=T), color="black", size=7, family= "Times") +
-  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=50, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=50, label=round(scaling)), check_overlap=T, color="black", size=4.2, family= "Helvetica") + 
-  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=30, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=30, label=round(synchrony)), check_overlap=T, color="black", size=4.2, family= "Helvetica") +
-  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=10, label="Mass (relative AUC):"), check_overlap=T, color="black", size=4.2, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=10, label=AUC_rel), check_overlap=T, color="black", size=4.2, family= "Helvetica") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=50, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=50, label=round(scaling)), check_overlap=T, color="black", size=3, family= "Helvetica") + 
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=30, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=30, label=round(synchrony)), check_overlap=T, color="black", size=3, family= "Helvetica") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-5, y=10, label="Mass (relative AUC):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=10, label=AUC_rel), check_overlap=T, color="black", size=3, family= "Helvetica") +
   geom_text(aes(x=f0peak_t, y=f0_stim_max-15, label="F0 peak"), check_overlap=T, color="#E066FF", size=3, family= "Helvetica") +
 #### legendary
   geom_segment(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, y=65, yend=85), color="red", size=.3, alpha=.8, linetype = "dashed", lineend = "round", position = "dodge") +
-  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=75), label="CoM", color="red", alpha=1, size=4.2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=75), label="CoM", color="red", alpha=1, size=3, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   geom_segment(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-10, y=90, yend=110), color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round", position = "dodge") +
-  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=100), label="CoG", color="blue", alpha=1, size=4.2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_text(aes(x=min(single_stim$per_fluct_bound,single_stim$interval_bounds,na.rm = T)-20, y=100), label="CoG", color="blue", alpha=1, size=3, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
 #### plot stuff
   xlim(-150, max(single_stim$per_fluct_bound, na.rm = T)+100) +
   # facet_wrap(~file, scales = "free", ncol = 2) + #, scales = "free"
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
-# ggsave(plot_comp, file=paste0("plots/",sel_file,"_plot_comp.pdf"),device=cairo_pdf)
+ggsave(plot_comp, file=paste0("plots/",sel_file,"_plot_comp.pdf"),device=cairo_pdf)
 
 ```
 
