@@ -15,21 +15,23 @@
 
 ####### Input form
 form Input parameters
-        comment Directories (with final slash):
-        sentence InDirAudio /xxx/audio/
-        sentence OutDirPitchObject	/xxx/praat_data/pitch_objects/
-        sentence OutDirPitchTier /xxx/praat_data/pitch_tiers/
-        sentence OutDirIntensityTier /xxx/praat_data/intensity_tiers/
+        comment Replace "xxx" with your diretories info. Note your platform's syntax:
+        comment PC directories are often "C:\...\"; Mac directories are often "/Users/.../".
+        # comment Do not forget the final slash!
+        sentence InDirAudio xxx/audio/
+        sentence OutDirPitchObject	xxx/praat_data/pitch_objects/
+        sentence OutDirPitchTier xxx/praat_data/pitch_tiers/
+        sentence OutDirIntensityTier xxx/praat_data/intensity_tiers/
         comment Manually inspect F0 for corrections?
         boolean inspect 0 
-        comment F0 path finder settings (adjustable):
+        comment F0 path finder settings (adjustable).
         real silenceThr 0.03
         real voicingThr 0.45
         real octave 0.01
         real octavejump 0.35
         real voiceunvoiced 0.14
         integer pitchmax 600
-        comment F0 smoothing bandwidth (Hz)
+        comment F0 smoothing bandwidth (Hz).
         integer smooth 10
 endform
 Erase all
