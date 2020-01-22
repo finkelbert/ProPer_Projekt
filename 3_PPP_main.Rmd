@@ -85,10 +85,8 @@ main_df <- mutate(group_by(main_df,file),
                   ## get f0 extremas  
                   f0_stim_max = max(f0_smooth, na.rm=T),
                   f0_stim_min = min(f0_smooth, na.rm=T),
-                  f0peak_t = ifelse(f0_smooth==f0_stim_max, t, NA),
-                  per_fluct_bound = NA,
-                  scaling = NA
-)
+                  f0peak_t = ifelse(f0_smooth==f0_stim_max, t, NA)
+                  )
 
 ```
 
