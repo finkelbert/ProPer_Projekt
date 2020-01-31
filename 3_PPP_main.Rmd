@@ -26,7 +26,7 @@ per_floor <- .03
 #
 ########--- relative to ("stim", "data", "speaker"...)
 ## per_floor and strengthresh are calculated relative to the maximum values of either the wole set, per speaker, or for each stimulus. 
-rel_to <- "stim"
+rel_to <- c("stim", "data", "speaker")[1]
 #
 ################-------- Smoothers
 ########--- periodic curve loess smooth span (0.01 -- 0.05) 
