@@ -105,7 +105,7 @@ plot_all <-
 ## periogram (smog_pp)
   geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=main_df$smog_pp_rel, size=main_df$smog_pp_rel*3) +
 ####### Periodic energy (smog_pp)
-  geom_line(aes(y=smog_pp_rel*f0_stim_min),color="gold", alpha=.5, size=1) + 
+  geom_line(aes(y=(smog_pp_rel*(f0_stim_min-50))+50),color="gold", alpha=.5, size=1) + 
 ####### TextGrids boundaries and labels (comment out if not available)
 ## boundaries
   geom_vline(aes(xintercept=main_df$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
@@ -143,20 +143,20 @@ plot1 <-
   geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=single_stim$smog_pp_rel, size=single_stim$smog_pp_rel*5) +
 ########## Power/intensity
 ## intensity
-  #geom_line(aes(y=int_rel*f0_stim_min),color="green", alpha=.2, size=.5) + 
+  #geom_line(aes(y=(int_rel*(f0_stim_min-50))+50),color="green", alpha=.2, size=.5) + 
 ## power
-  geom_line(aes(y=total_power_rel*f0_stim_min),color="cornflowerblue", alpha=.5, size=.5) + 
+  geom_line(aes(y=(total_power_rel*(f0_stim_min-50))+50),color="cornflowerblue", alpha=.5, size=.5) + 
   ########## Periodic fraction (strength/HNR)
 ## raw strength (before "strengthresh")
-  # geom_line(aes(y=strength_rowmax*f0_stim_min), color="green", alpha=.3, size=.5) +
+  # geom_line(aes(y=(strength_rowmax*(f0_stim_min-50))+50), color="green", alpha=.3, size=.5) +
 ## processed strength  (after "strengthresh")
-  geom_line(aes(y=strength_general*f0_stim_min), color="tomato", alpha=.5, size=.5) +
+  geom_line(aes(y=(strength_general*(f0_stim_min-50))+50), color="tomato", alpha=.5, size=.5) +
 ########## Periodic power (total power * periodic fraction)
-  geom_line(aes(y=periodic_power_general_rel*f0_stim_min),color="purple3", alpha=.6, size=.5) +
+  geom_line(aes(y=(periodic_power_general_rel*(f0_stim_min-50))+50),color="purple3", alpha=.6, size=.5) +
 ########## Log periodic power (10*log10(x/per_thresh))
-  geom_line(aes(y=log_pp_rel*f0_stim_min),color="white", alpha=.5, size=.5) +
+  geom_line(aes(y=(log_pp_rel*(f0_stim_min-50))+50),color="white", alpha=.5, size=.5) +
 ########## Smoothed log_pp (final mutation)
-  geom_line(aes(y=smog_pp_rel*f0_stim_min),color="gold", alpha=.4, size=2) +
+  geom_line(aes(y=(smog_pp_rel*(f0_stim_min-50))+50),color="gold", alpha=.4, size=2) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
   geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
