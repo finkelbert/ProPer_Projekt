@@ -13,7 +13,7 @@
 #		the "Audio" directory.
 # AUTHORS:	Aviad Albert and Francesco Cangemi {a.albert / fcangemi} @uni-koeln.de
 
-####### Input form Tobias
+####### Input form
 form Input parameters
         comment Replace "xxx" with your diretories info. Note your platform's syntax:
         comment PC directories are often "C:\...\"; Mac directories are often "/Users/.../".
