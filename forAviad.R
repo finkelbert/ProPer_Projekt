@@ -492,7 +492,7 @@ sampleDf <- function(df,n) {
   df[ indices, ]
 }
 
-mkPeriodicEnergy <- function(wavFile, transform=(function(x) { log(1+x) }), subSample=10, taus=(44:512), log2WindowSize=11) {
+mkPeriodicEnergy <- function(wavFile, transform=(function(x) { x }), subSample=10, taus=(44:512), log2WindowSize=11) {
   wavFile %>% readWave() -> a
   an <- a@left %>% normalise() %>% (function(v) 0.2*(v - 1.0))
   l <- length(an); x <- (1:l)*1000/a@samp.rate
