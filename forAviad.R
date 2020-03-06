@@ -506,7 +506,7 @@ mkPeriodicEnergy <- function(wavFile, subSample=10, taus=(44:512), log2WindowSiz
     geom_line(data=dg,aes(x=x,y=log(1+w)),colour="red",size=0.7) +
     geom_line(data=dfa,aes(x=x,y=y),colour="black",size=0.3) +
     theme_bw() +
-    ggtitle(paste(DataFile,"red = average areas under autocorrelation curves",sep=" ") ) +
+    ggtitle("red = average areas under autocorrelation curves" ) +
     xlab("ms") + ylab("averaged areas under autocorrelation curves, fitted to unit interval")
   plot( g )
   df
