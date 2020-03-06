@@ -492,7 +492,7 @@ sampleDf <- function(df,n) {
   df[ indices, ]
 }
 
-mkPeriodicEnergy <- function(wavFile, subSample=10, taus=(44:512), log2WindowSize=11) {
+mkPeriodicEnergy <- function(wavFile, transform=(function(x) { log(1+x) }, subSample=10, taus=(44:512), log2WindowSize=11) {
   wavFile %>% readWave() -> a
   an <- a@left %>% normalise() %>% (function(v) 0.2*(v - 1.0))
   l <- length(an); x <- (1:l)*1000/a@samp.rate
@@ -500,10 +500,11 @@ mkPeriodicEnergy <- function(wavFile, subSample=10, taus=(44:512), log2WindowSiz
   ac <- autocorrelate(a@left,taus,log2WindowSize)
   df <- data.frame(x=x,i=(1:l))
   autocorrelateMeanSinusoidPower( ac ) %>% sqrt() %>% normalise() -> df$w
+  df$vv <- transform( df$w )
   dg <- df %>% sampleDf(subSample)
   g <- ggplot() +
     ## geom_line(data=df,aes(x=x,y=-a*q),colour="darkgreen",size=0.7) +
-    geom_line(data=dg,aes(x=x,y=log(1+w)),colour="red",size=0.7) +
+    geom_line(data=dg,aes(x=x,y=vv),colour="red",size=0.7) +
     geom_line(data=dfa,aes(x=x,y=y),colour="black",size=0.3) +
     theme_bw() +
     ggtitle("red = average areas under autocorrelation curves" ) +
