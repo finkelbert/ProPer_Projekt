@@ -4,7 +4,8 @@
 {a.albert/fcangemi}\@uni-koeln.de
 
 ## Instructions for the PPP (Praat's Periodic Power) workflow
-(Note: the TMPR workflow is not yet ready for distribution)
+(Note: the TMPER workflow is not yet ready for distribution... stay tuned!)
+
 If you have *RStudio*, it is recommended to open the R project `Periogram-Projekt.Rproj` in order to manange all the files in this workflow (otherwise use the individual .Rmd files within the folder) and proceed as follows:
 
 ### 1. Data extraction from Praat (Praat script)
