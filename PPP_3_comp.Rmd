@@ -115,14 +115,17 @@ CoM <- function(df) {
 # Center of Gravity (center of F0 slope)
 CoG <- function(df) {
   # set the floor of the F0 curve: local minima minus 10th of the overall range
-  f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
+  # f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
   # round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
+  f0Floor <- min(df$f0_smooth_interp, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
   round(sum((df$f0_smooth_interp - f0Floor) * df$t * df$smog_pp_rel, na.rm=T) / sum((df$f0_smooth_interp - f0Floor) * df$smog_pp_rel, na.rm=T))
 }
 
 # F0 and periodic energy values at centers
-f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
-f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
+# f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
+# f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
+f0atCoM <- function(df) df$f0_smooth_interp[df$t == round(df$CoM)] 
+f0atCoG <- function(df) df$f0_smooth_interp[df$t == round(df$CoG)]
 PERatCoM <- function(df) round(df$smog_pp_rel[df$t == round(df$CoM)],4)
 PERatCoG <- function(df) round(df$smog_pp_rel[df$t == round(df$CoG)],4)
 
@@ -170,7 +173,7 @@ comp_df <- mutate(group_by(comp_df,file),
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
-sel_file <- files[4] # or: "filename" 
+sel_file <- files[5] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
 
 # observe derivatives to adjust automatic detector
@@ -223,7 +226,7 @@ plot_comp <-
   # facet_wrap(~file, scales = "free", ncol = 2) + #, scales = "free"
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
-ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
+# ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
 
 ```
 

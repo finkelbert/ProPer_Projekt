@@ -83,9 +83,9 @@ main_df <- mutate(group_by(main_df,file),
                   ## get textgrid interval boundaries (comment out if missing)
                   interval_bounds = ifelse(interval_start>0, interval_start, NA),
                   ## get f0 extremas  
-                  f0_stim_max = max(f0_smooth, na.rm=T),
-                  f0_stim_min = min(f0_smooth, na.rm=T),
-                  f0peak_t = ifelse(f0_smooth==f0_stim_max, t, NA)
+                  f0_stim_max = max(f0_smooth_interp, na.rm=T),
+                  f0_stim_min = min(f0_smooth_interp, na.rm=T),
+                  f0peak_t = ifelse(f0_smooth_interp==f0_stim_max, t, NA)
                   )
 
 ```
