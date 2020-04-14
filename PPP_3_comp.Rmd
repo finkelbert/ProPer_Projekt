@@ -30,7 +30,7 @@ The following are a set of functions that are based on boundary detection (*boun
 
 ```{r bound_detector, warning=FALSE, echo=FALSE}
 #### Choose automatic or manual detection
-detetor_type <- "auto" # detetor_type <- c("auto","man") 
+detetor_type <- c("auto","man")[1]
 
 ### Find boundaries: automatic detection ("auto")
 if(detetor_type == "auto") boundetect <- which(
@@ -116,7 +116,8 @@ CoM <- function(df) {
 CoG <- function(df) {
   # set the floor of the F0 curve: local minima minus 10th of the overall range
   f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
-  round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
+  # round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
+  round(sum((df$f0_smooth_interp - f0Floor) * df$t * df$smog_pp_rel, na.rm=T) / sum((df$f0_smooth_interp - f0Floor) * df$smog_pp_rel, na.rm=T))
 }
 
 # F0 and periodic energy values at centers
@@ -169,7 +170,7 @@ comp_df <- mutate(group_by(comp_df,file),
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
-sel_file <- files[3] # or: "filename" 
+sel_file <- files[4] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
 
 # observe derivatives to adjust automatic detector
@@ -199,19 +200,19 @@ plot_comp <-
 #### boundaries
   geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.5) +
   geom_vline(aes(xintercept=single_stim$bound), linetype="solid", color="red", size=.5, alpha=.3) + 
-  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=110, yend=PERatCoM*f0_stim_min), position = "dodge", color="red", size=.3, alpha=.8, linetype = "longdash", lineend = "round") + 
-  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=110, yend=f0_stim_min), position = "dodge", color="green", size=.3, alpha=1, linetype = "dotted", lineend = "round") + 
-  geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG, yend=PERatCoG*f0_stim_min), position = "dodge", color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round") +
-  geom_segment(aes(x=f0peak_t, xend=f0peak_t, y=f0_stim_max-10, yend=f0_stim_max+10), position = "dodge", color="#E066FF", size=1, alpha=.8, linetype = "solid", lineend = "round") +
+#### landmarks 
+  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=100, yend=PERatCoM*(f0_stim_min-50)+50), position = "dodge", color="red", size=.3, alpha=.8, linetype = "longdash", lineend = "round") + 
+  geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG, yend=PERatCoG*(f0_stim_min-50)+50), position = "dodge", color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round") +
+  # geom_segment(aes(x=f0peak_t, xend=f0peak_t, y=f0_stim_max-10, yend=f0_stim_max+10), position = "dodge", color="#E066FF", size=1, alpha=.8, linetype = "solid", lineend = "round") +
 #### annotations
   geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+30, label=label, check_overlap=T), color="black", size=7, family= "Times") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=100, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=100, label=round(scaling)), check_overlap=T, color="black", size=3, family= "Helvetica") + 
-  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=80, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=80, label=round(synchrony)), check_overlap=T, color="black", size=3, family= "Helvetica") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=60, label="Mass (relative AUC):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=single_stim$CoM, y=60, label=AUC_rel), check_overlap=T, color="black", size=3, family= "Helvetica") +
-  geom_text(aes(x=f0peak_t, y=f0_stim_max-15, label="F0 peak"), check_overlap=T, color="#E066FF", size=3, family= "Helvetica") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=95, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=95, label=round(scaling)), check_overlap=T, color="black", size=3, family= "Helvetica") + 
+  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=75, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=75, label=round(synchrony)), check_overlap=T, color="black", size=3, family= "Helvetica") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=55, label="Mass (relative AUC):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=single_stim$CoM, y=55, label=AUC_rel), check_overlap=T, color="black", size=3, family= "Helvetica") +
+  # geom_text(aes(x=f0peak_t, y=f0_stim_max-15, label="F0 peak"), check_overlap=T, color="#E066FF", size=3, family= "Helvetica") +
 #### legendary
   geom_segment(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-10, y=115, yend=135), color="red", size=.3, alpha=.8, linetype = "dashed", lineend = "round", position = "dodge") +
   geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-20, y=125), label="CoM", color="red", alpha=1, size=3, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
@@ -222,7 +223,7 @@ plot_comp <-
   # facet_wrap(~file, scales = "free", ncol = 2) + #, scales = "free"
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
-# ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
+ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
 
 ```
 
