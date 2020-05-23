@@ -58,10 +58,10 @@ f0_data_min <- min(main_df$f0_smooth, na.rm=T)
 main_df <- mutate(group_by(main_df,file),
                   ## per_floor threshold settings
                   max_stim_per_power = max(periodic_power, na.rm=T),
-                  per_thresh_indeed = ifelse(rel_to=="stim", max_stim_per_power * per_floor, ifelse(rel_to=="speaker", max_speaker_per_power * per_floor, max_data_per_power * per_floor)),
+                  per_thresh_indeed = ifelse(rel_to=="stim", max_stim_per_power * per_floor, ifelse(rel_to=="data", max_data_per_power * per_floor, max_speaker_per_power * per_floor)),
                   ## strengthresh threshold settings
                   max_stim_strength = max(strength_rowmax, na.rm=T),
-                  strengthresh_indeed = ifelse(rel_to=="stim", max_stim_strength * strengthresh, ifelse(rel_to=="speaker", max_speaker_strength * strengthresh, max_data_strength * strengthresh)),
+                  strengthresh_indeed = ifelse(rel_to=="stim", max_stim_strength * strengthresh, ifelse(rel_to=="data", max_data_strength * strengthresh, max_speaker_strength * strengthresh)),
                   ## create new periodic power vector
                   strength_general = ifelse(strength_rowmax < strengthresh_indeed, 0, strength_rowmax),
                   periodic_power_general = total_power * strength_general,
