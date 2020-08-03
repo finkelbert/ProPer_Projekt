@@ -1,0 +1,205 @@
+# ProPer visualization (III): *Periograms*
+
+Adjust the periodic energy and FO curves and create their visual interaction, a.k.a. *Periodgram*.
+
+```{r clean_start}
+rm(list = ls())
+
+## Load required libraries 
+library(ggplot2)
+library(dplyr)
+library(seewave)
+library(utf8)
+library(Cairo)
+```
+
+```{r read_raw_df, warning=FALSE}
+main_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = TRUE)
+```
+
+## Prepare periodic energy & F0 curves
+
+Tweak the paramenters in first 4 rows to adjust your data. Use the visual plots in next chunks to 
+
+```{r prepare_main_df, warning=FALSE}
+################
+################-------- Pre-sets
+################
+sampleRate <- 1000                          # (100 -- 44100) number of data points per second
+strengthresh <- 0.40                        # (0 -- 0.5) floor for periodic fraction (percentage from 1.00 = 100%)
+per_floor <- .030                           # (.001 -- .05) floor after log-transform (percentage from 1.00 = 100%)
+rel_to <- c("stim", "data", "speaker")[1]   # ([1] -- [3]) anchor for relative measurements (relative to each stimulus, the entire data set, or to pre-defined speaker sets)
+#
+## find maximum values for entire data set
+max_data_per_power <- round(max(main_df$periodic_power, na.rm=T),7)
+max_data_strength <- max(main_df$strength_rowmax, na.rm=T)
+f0_data_min <- min(main_df$f0_smooth, na.rm=T)
+f0_data_max <- max(main_df$f0_smooth, na.rm=T)
+## find maximum values for speaker-defined sets (if exist)
+if(length(main_df$speaker)>0) main_df <- mutate(group_by(main_df,speaker),
+                  max_speaker_per_power = max(periodic_power, na.rm=T),
+                  max_speaker_strength = max(strength_rowmax, na.rm=T),
+                  f0_speaker_min = min(main_df$f0_smooth, na.rm=T),
+                  f0_speaker_max = max(main_df$f0_smooth, na.rm=T))
+## find maximum values for each stimulus 
+main_df <- mutate(group_by(main_df,file),
+                  max_stim_per_power = max(periodic_power, na.rm=T),
+                  max_stim_strength = max(strength_rowmax, na.rm=T),
+                  f0_stim_min = min(f0_smooth, na.rm=T),
+                  f0_stim_max = max(f0_smooth, na.rm=T),
+#
+## conclude relative anchors and thresholds
+                  per_thresh_indeed = ifelse(rel_to=="stim", max_stim_per_power * per_floor, 
+                                             ifelse(rel_to=="data", max_data_per_power * per_floor, 
+                                                    max_speaker_per_power * per_floor)),
+                  strengthresh_indeed = ifelse(rel_to=="stim", max_stim_strength * strengthresh, 
+                                               ifelse(rel_to=="data", max_data_strength * strengthresh, 
+                                                      max_speaker_strength * strengthresh)),
+                  ## create new periodic power vector
+                  periodic_fraction = ifelse(strength_rowmax < strengthresh_indeed, 0, strength_rowmax),
+                  pp_post = total_power * periodic_fraction,
+                  ## log periodic power
+                  log_pp = 10*log10(pp_post/per_thresh_indeed),
+                  log_pp = ifelse(log_pp<0 | is.na(log_pp), 0, log_pp),
+                  ## create relative scales (0--1) 
+                  intRel = ifelse(intensity<0, 0, 
+                                   round(intensity/max(intensity, na.rm=TRUE),7)), 
+                  total_powerRel = ifelse(total_power<0, 0, 
+                                           round(total_power/max(total_power, na.rm=TRUE),7)), 
+                  pp_postRel = ifelse(pp_post<0, 0, 
+                                                   round(pp_post / max(pp_post, na.rm=TRUE), 7)),
+                  log_ppRel = round(log_pp/max(log_pp, na.rm=TRUE),7),
+################
+################-------- Mutations
+################
+                  ########## periodic energy smoothing (log+smooth = smog)
+                  ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
+                  smog_pp20Hz = bwfilter(wave = log_pp, f = sampleRate, to = 20, n = 2),
+                  smog_pp20Hz = ifelse(smog_pp20Hz < 0, 0, round(smog_pp20Hz / max(smog_pp20Hz,na.rm=T), 7)),
+                  ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
+                  smog_pp12Hz = bwfilter(wave = log_pp, f = sampleRate, to = 12, n = 1),
+                  smog_pp12Hz = ifelse(smog_pp12Hz < 0, 0, round(smog_pp12Hz / max(smog_pp12Hz, na.rm=T), 7)),
+                  ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
+                  smog_pp8Hz = bwfilter(wave = log_pp, f = sampleRate, to = 8, n = 1),
+                  smog_pp8Hz = ifelse(smog_pp8Hz < 0, 0, round(smog_pp8Hz / max(smog_pp8Hz, na.rm=T), 7)),
+                  ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
+                  smog_pp5Hz = bwfilter(wave = log_pp, f = sampleRate, to = 5, n = 1),
+                  smog_pp5Hz = ifelse(smog_pp5Hz < 0, 0, round(smog_pp5Hz / max(smog_pp5Hz, na.rm=T), 7)),
+                  ########## F0 interpolating and smooting
+                  f0_interp = pracma::interp1(t, f0_smooth),
+                  f0_interp_stretch = ifelse((is.na(f0_interp) & t<min(which(!is.na(f0_interp)))), 
+                                             f0_interp[min(which(!is.na(f0_interp)))], 
+                                             ifelse((is.na(f0_interp) & t>=max(which(!is.na(f0_interp)))), 
+                                                    f0_interp[max(which(!is.na(f0_interp)))], f0_interp)),
+                  ### 6Hz low-pass filter (166.7ms  intervals): "vibrato smooth"
+                  f0_smooth_interp = ifelse(!is.na(f0_interp), 
+                                            bwfilter(wave = f0_interp_stretch, f = sampleRate, to = 6, n = 1), NA),
+                  ## get f0 maxima  
+                  f0peak_t = ifelse(f0_smooth_interp==f0_stim_max, t, NA)
+                  )
+
+```
+
+## plot entire data sets for general overview of the f0 and periodic energy curves 
+
+Create subsets with no more than 20 items in case the set is larger than 20.
+Use the comment in/out (#) to toggle visualization of different data components.
+
+```{r periogram_all, warning=FALSE, echo=FALSE}
+
+periodicNRG <- main_df$smog_pp20Hz # 5Hz / 8Hz / 12Hz / 20Hz
+
+periogram_all <- 
+  ggplot(main_df, aes(x=t)) +
+####### F0 curves
+## smooth
+  #geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) + 
+## interpolated
+  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
+## periogram (smog_pp)
+  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=periodicNRG, size=periodicNRG*3) +
+########## Smoothed log_pp (4 smoothing flavors)
+  # geom_line(aes(y=(smog_pp20Hz*(f0_stim_min-50))+50),color="lightsteelblue", alpha=.5, size=.5) +
+  # geom_line(aes(y=(smog_pp12Hz*(f0_stim_min-50))+50),color="lightyellow", alpha=.6, size=1) +
+  # geom_line(aes(y=(smog_pp8Hz*(f0_stim_min-50))+50),color="moccasin", alpha=.4, size=1.5) +
+  # geom_line(aes(y=(smog_pp5Hz*(f0_stim_min-50))+50),color="rosybrown1", alpha=.3, size=2) +
+########## Smoothed log_pp (final mutation in periogram)
+  geom_line(aes(y=(periodicNRG*(f0_stim_min-50))+50),color="slategray4", alpha=.7, size=1) +
+####### TextGrids boundaries and labels (comment out if not available)
+## boundaries
+  geom_vline(aes(xintercept=main_df$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+## annotations
+  geom_text(aes(x=main_df$interval_mid, y=f0_stim_max+10, label=as_utf8(as.character(label)), check_overlap=T), color="white", size=2, family= "Avenir") +
+## plot stuff
+  facet_wrap(~file, strip.position = "top", scales = "free") +
+  theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
+print(periogram_all)  
+# ggsave(periogram_all, file="plots/periogram_all.pdf", device=cairo_pdf)
+
+```
+
+## plot selected stimuli (detailed review of the data)
+Use the comment in/out (#) to toggle visualization of different data components.
+
+```{r plot_singles, warning=FALSE, echo=FALSE}
+files <- main_df$file
+files <- files[!duplicated(files)==TRUE]
+sel_file <- files[4] #"xxx" 
+single_stim <- dplyr::filter(main_df, file==sel_file)
+
+periodicNRG <- single_stim$smog_pp20Hz # 5Hz / 8Hz / 12Hz / 20Hz
+
+periogram_single <-
+  ggplot(single_stim, aes(x=t)) +
+  ggtitle(paste0(sel_file)) +  
+  #xlab("Time (ms)") + ylab("F0 (Hz)") +
+########## F0 curves
+## pre-smoothed F0 (from pitch object)
+  # geom_point(aes(y=f0_row1),color="green", alpha=.5, size=.5) +
+## smoothed F0 (from pitch tier)
+  # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
+## interpolated F0 +smoothed (from R)
+  # geom_point(aes(y=f0_interp),color="orange", alpha=.3, size=.3) +
+  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
+## periogram (smog_pp)
+  geom_line(aes(y=f0_smooth_interp),color="magenta2", alpha=periodicNRG, size=periodicNRG*5) +
+########## Power/intensity
+## intensity
+  # geom_line(aes(y=(intRel*(f0_stim_min-50))+50),color="yellow", alpha=.6, size=.5) +
+## power
+  # geom_line(aes(y=(total_powerRel*(f0_stim_min-50))+50),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
+########## Periodic fraction (strength/HNR)
+## raw strength (before "strengthresh")
+  # geom_line(aes(y=(strength_rowmax*(f0_stim_min-50))+50), color="green", alpha=.2, size=.75, linetype="twodash") +
+## processed strength  (after "strengthresh")
+  # geom_line(aes(y=(periodic_fraction*(f0_stim_min-50))+50), color="tomato", alpha=.7, size=.5, linetype="dotted") +
+########## Periodic power (total power * periodic fraction)
+  # geom_line(aes(y=(pp_postRel*(f0_stim_min-50))+50),color="purple3", alpha=.4, size=1.5, linetype="dotdash") +
+########## Log periodic power (10*log10(PER/per_thresh))
+  # geom_line(aes(y=(log_ppRel*(f0_stim_min-50))+50),color="seashell", alpha=.3, size=2, linetype="longdash") +
+########## Smoothed log_pp (4 smoothing flavors)
+  # geom_line(aes(y=(smog_pp20Hz*(f0_stim_min-50))+50),color="lightsteelblue", alpha=.5, size=.5) +
+  # geom_line(aes(y=(smog_pp12Hz*(f0_stim_min-50))+50),color="lightyellow", alpha=.6, size=1) +
+  # geom_line(aes(y=(smog_pp8Hz*(f0_stim_min-50))+50),color="moccasin", alpha=.4, size=1.5) +
+  # geom_line(aes(y=(smog_pp5Hz*(f0_stim_min-50))+50),color="rosybrown1", alpha=.3, size=2) +
+########## Smoothed log_pp (final mutation in periogram)
+  geom_line(aes(y=(periodicNRG*(f0_stim_min-50))+50),color="slategray4", alpha=.7, size=1) +
+########## TextGrids boundaries and annotations (comment out if not available)
+## boundaries
+  geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+## annotations
+  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+10, label=as_utf8(as.character(label)), check_overlap=T), size=4, color="white", family= "Avenir") + 
+## plot stuff
+  theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(), axis.ticks = element_blank()) 
+print(periogram_single)
+# ggsave(periogram_single,file=paste0("plots/",sel_file,"_plot.pdf"),device=cairo_pdf)
+
+```
+
+## Done?
+After reviewing the data, adjusting all theresholds and correcting all the F0 curves, write the main data file for further processing
+
+```{r write_main_df}
+## Write the main data file
+write.csv(main_df, "data_tables/main_df.csv", row.names=FALSE)
+```
