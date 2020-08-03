@@ -1,6 +1,6 @@
 # ProPer
 ### PROsodic analysis with PERiodic energy
-#### A workflow for periodic energy extraction (with Praat) and usage (with R)  
+#### A workflow for periodic energy extraction and usage (with Praat and R)  
 *Aviad Albert, Francesco Cangemi & Martine Grice*  
 {a.albert/fcangemi/martine.grice}\@uni-koeln.de
 
