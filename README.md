@@ -45,7 +45,7 @@ Use the plots at the end of the file to inspect the data and adjust the threshol
 
 The codes in `4) ProPer analyses (Synchrony PEM etc).Rmd` are designed to extract quantifiable data using periodic energy (see Cangemi et al. 2019). It starts with a boundary detector to locate the syllabic boundaries. We use an automatic method, based on 1st and 2nd derivatives of the periodic energy curve to locate relevant minima. The following computations are performed within and across the resulting intervals:
 
-+ **AUC**: The area under the periodic energy curve is computed to reflect the periodic *mass*, related to prosodic *prominence*.
++ **PEM**: The area under the periodic energy curve is computed to reflect the *Periodic Energy Mass*, related to prosodic *prominence*.
 + **CoM**: The center of mass of periodic energy within syllables is extracted. 
 + **CoG**: The center of gravity of F0 within syllables is extracted.
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables.
