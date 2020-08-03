@@ -1,4 +1,6 @@
-# Praat'sPeriodicPower: Computations (PPP_comp) 
+# ProPer analyses (IV): *Synchrony*, *Scaling* & *PEM*
+
+Quantifying continuous prosody with periodic energy and F0 data to describe pitch contours (*Synchrony* and *Scaling*) and quantify prosodic strength (*PEM*; Periodic Energy Mass).
 
 ```{r clean_start}
 rm(list = ls())
