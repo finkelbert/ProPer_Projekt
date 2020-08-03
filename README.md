@@ -1,26 +1,28 @@
-# Periogram Projekt
+# ProPer
+### PROsodic analysis with PERiodic energy
 #### A workflow for periodic energy extraction (with Praat) and usage (with R)  
 *Aviad Albert & Francesco Cangemi*  
 {a.albert/fcangemi}\@uni-koeln.de
 
-## Instructions for the PPP (Praat's Periodic Power) workflow
-(Note: the TMPER workflow is not yet ready for distribution... stay tuned!)
+## Instructions for the ProPer workflow
+If you have *RStudio*, it is recommended to open the R project `ProPer_Projekt.Rproj` in order to manange all the files in this workflow (otherwise use the individual .Rmd files within the folder) and proceed as follows:
 
-If you have *RStudio*, it is recommended to open the R project `Periogram-Projekt.Rproj` in order to manange all the files in this workflow (otherwise use the individual .Rmd files within the folder) and proceed as follows:
-
-### 1. Data extraction from Praat (Praat script)
+### 1) ProPer pre-preparation (Acoustics-to-Praat)
+**Data extraction from Praat (Praat script)**
 Copy the Praat script from `PPP_0_Praat_script.praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (preferably PCM with 44.1kHz sample-rate and 16-24 bit depth).
 
 We use the pitch objects in Praat to extract the *periodic fraction* of the signal via the strength of the pitch candidates, denoting the strength of similarity in the auto-correlation from 0 to 1. To eventually get the *periodic power*, the periodic fraction is multiplied by the *total power*, which we derive from the intensity tier. To keep things consistent, the parameters that determine Praat's intensity and pitch candidates analysis are "hard-coded" to the script (i.e. their values are given in constant numbers and they don't show up in the form). The parameters that appear in the form can only change Praat's F0 path finding algorithm, which influences Praat's choice of F0 among the given candidates. These can be freely adjusted to optimize F0 detection without affecting the periodic power reading.
 
 The Praat script is based on *mausmooth* (Cangemi & Albert 2016), prompting a grouped view of the sound and pitch objects of each item in the list, allowing the user to correct pitch candidates in the pitch object (e.g. octave jumps) before the pitch object and the smoothed pitch tier are saved. This behavior can be switched off in the form by declicking "inspect" (the pitch objects and tiers will be automatically created and saved). 
 
-### 2. Import Praat data into R tables (raw_df)
+### 2) ProPer preparation (Praat-to-R)
+**Import Praat data into R tables (raw_df)**
 The R codes in `PPP_1_raw.Rmd` use the *rPraat* package to directly read Praat's objects and tiers and collect all selected parameters into a data table with all the raw data (*raw_df*).
 
 Note that these codes allow for optional data from Praat's TextGrids that the user can create separately and place in the "praat_data/textgrids" directory. The current setting is designed to read a single interval tier ("seg") demarcating segments/syllables/words (boundaries and annotations).
 
-### 3. Prepare the main data table (main_df)
+### 3) ProPer visualization (Periograms)
+**Prepare the main data table (main_df)**
 The codes in `PPP_2_main.Rmd` result in the visualization paradigm that we call ***Periograms***, where the F0 contour is visually modulated (thickness and transparency) in accordance with corresponding periodic energy levels (see Albert et al. 2018, 2019).
 
 The first part of `3_PPP_main` requires/allows interaction with a few important variables, before it creates new data based on these determinations:
@@ -33,7 +35,8 @@ The first part of `3_PPP_main` requires/allows interaction with a few important 
 
 Use the plots at the end of the file to inspect the data and adjust the thresholds before saving the *main_df* table.
 
-### 4. Perform computations on the data (comp_df)
+### 4) ProPer analyses (Synchrony, PEM, etc.)
+**Perform computations on the data (comp_df)**
 The codes in `PPP_3_comp.Rmd` are designed to extract quantifiable data using periodic energy (see Cangemi et al. 2019). It starts with a boundary detector to locate the syllabic boundaries. We use an automatic method, based on 1st and 2nd derivatives of the periodic energy curve to locate relevant minima. The following computations are performed within and across the resulting intervals:
 
 + **AUC**: The area under the periodic energy curve is computed to reflect the periodic *mass*, related to prosodic *prominence*.
