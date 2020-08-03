@@ -1,4 +1,6 @@
-# Praat'sPeriodicPower: Raw (PPP_raw)
+# ProPer preparation (II): Praat-to-R
+
+Collect data from Praat objects into an R dataframe.
 
 ```{r clean_start, warning=FALSE}
 rm(list = ls())
@@ -78,6 +80,7 @@ if(length(files_textgrid)>0) tg_df <- plyr::ldply(files_textgrid, function(f){
   data.frame(file, t=as.integer(as.character(t1)), interval_start=as.integer(as.character(t1)), interval_mid=as.integer(as.character(t_mid)), interval_end=as.integer(as.character(t2)), label)
 })
 if(length(files_textgrid)>0) tg_df$label <- levels(tg_df$label)[as.numeric(tg_df$label)]
+if(length(files_textgrid)>0) tg_df <- mutate(group_by(tg_df,file), interval_bounds = ifelse(interval_start>0, interval_start, NA))
 
 ##### Combine all data
 raw_df <- left_join(full_time_df, f0_smooth_df, by = c("file", "t"))
