@@ -1,4 +1,6 @@
-# TITLE:	Praat's Periodic Power (PPP)
+# TITLE:	ProPer preparation (I): Acoustics-to-Praat
+#   Extract acoustic data from Praat for further analysis with R 
+#   (see following files in workflow).
 # INPUT:	Audio files (preferably at least 44.1kHz sample-rate and 16bit PCM).
 # OUTPUT:	Pitch objects, pitch tiers and intensity tiers.
 # NOTES:	This script creates the corresponding Praat objects (see "output") for 
@@ -7,11 +9,13 @@
 #		periodic energy curves. The pitch tier object is used for standard 
 #		F0 information, which can be tweaked in fields of this script's form, 
 #		and can be manually corrected when the "inspect" option is switched on.
-#IMPORTANT:	Before running the script, make sure to replace the 'xxx' in the 
+# IMPORTANT:	Before running the script, make sure to replace the 'xxx' in the 
 #		directories with your relevant directory string (either in the script 
 #		or in the prompted form). Also, make sure that your audio files are in 
 #		the "Audio" directory.
 # AUTHORS:	Aviad Albert and Francesco Cangemi {a.albert / fcangemi} @uni-koeln.de
+#
+# To Run:   Select all and copy this text into a Praat script window and run.
 
 ####### Input form
 form Input parameters
