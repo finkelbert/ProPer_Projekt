@@ -1,4 +1,4 @@
-# TITLE:	ProPer preparation (I): Acoustics-to-Praat
+# TITLE:	ProPer pre-preparation (I): Acoustics-to-Praat
 #   Extract acoustic data from Praat for further analysis with R 
 #   (see following files in workflow).
 # INPUT:	Audio files (preferably at least 44.1kHz sample-rate and 16bit PCM).
