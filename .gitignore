@@ -1,5 +1,6 @@
-# beta workflows
+# beta workflows and local backups
 TMPER*
+BACKU*
 
 # Preview files
 *.html
