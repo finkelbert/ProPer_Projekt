@@ -6,55 +6,54 @@ Quantifying continuous prosody with periodic energy and F0 data to describe pitc
 rm(list = ls())
 
 ## Load required libraries 
-library(ggplot2)
-library(dplyr)
-library(Cairo)
+require(ggplot2)
+require(dplyr)
+require(seewave)
+require(Cairo)
+
 ```
 
 ```{r read_main_df, warning=FALSE}
+
 comp_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 
-## add variables
+```
+
+Initial chunk deals with boundary detection -- either adjustable automatic detection ("auto") or an external manual segmentation (man")
+
+```{r bound_detector, warning=FALSE, echo=FALSE}
+
+detection_sensitivity <- 8  # choose values from 5 to 20 (low-pass smooth in Hz), 
+                            # for coarse to fine automatic boundary detection
+detetor_type <- c("auto","man")[1]  # choose detection type: automatic or manual
+sampleRate <- 1000  # (100 -- 44100) number of data points per second
+
 comp_df <- mutate(group_by(comp_df,file),
                   ## create empty values for later
                   bound = NA,
                   scaling = NA,
-                  ## compute smooth derivatives (1st and 2nd) of the periodic energy curve
-                  smog_pp_1st_der =  ifelse(!is.na(smog_pp), diff(lag(smog_pp,1)), 0),
-                  smog_pp_1st_der = round(predict(loess(smog_pp_1st_der~t, data=comp_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7),
-                  smog_pp_2nd_der =  ifelse(!is.na(smog_pp_1st_der), diff(lag(smog_pp_1st_der,1))*1000, 0),
-                  smog_pp_2nd_der = round(predict(loess(smog_pp_2nd_der~t, data=comp_df$file, span=0.1, degree = 1, na.action = "na.exclude")),7)
+                  ## compute and smooth 1st and 2nd derivatives of the periodic energy curve
+                  smog_pp_1st_der = ifelse(t==0, 0, (smog_pp20Hz - lag(smog_pp20Hz,1))*1000),
+                  smog_pp_1st_der = bwfilter(wave = smog_pp_1st_der, f = sampleRate, to = 40, n = 2),
+                  smog_pp_2nd_der = ifelse(t==0, 0, (smog_pp_1st_der - lag(smog_pp_1st_der,1))*20),
+                  smog_pp_2nd_der = bwfilter(wave = smog_pp_2nd_der, f = sampleRate, to = detection_sensitivity, n = 2)
                   )
-
-```
-
-The following are a set of functions that are based on boundary detection (*bound_detector* chunk) and computation within and across resulting intervals (*run_fun* chunk). We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
-
-```{r bound_detector, warning=FALSE, echo=FALSE}
-#### Choose automatic or manual detection
-detetor_type <- c("auto","man")[1]
 
 ### Find boundaries: automatic detection ("auto")
 if(detetor_type == "auto") boundetect <- which(
-# locate positive maxima in the 2nd derivative
-  (comp_df$smog_pp_2nd_der > 0.2 & #0.02, 0.06, 0.2
+     ## locate positive maxima in the 2nd derivative
+     comp_df$smog_pp_2nd_der > 0.1 & 
+     ## eliminate elbows:
+     lead(comp_df$smog_pp_1st_der,30) > 0 &
+     ## (continue)
      comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,1) &
      comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,10) &
      comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,20) &
      comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,1) &
      comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,10) &
-     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,20)) |
-# or near-positive 2nd derivative maxima with positive 1st derivative values
-    (comp_df$smog_pp_1st_der > 0.005 &
-     comp_df$smog_pp_2nd_der > -1 &
-     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,1) &
-     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,10) &
-     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,20) &
-     comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,30) &
-     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,1) &
-     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,10) &
-     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,20) &
-     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,30)))
+     comp_df$smog_pp_2nd_der > lead(comp_df$smog_pp_2nd_der,20))
+
+# comp_df$smog_pp_1st_der > -1 &
 
 ### Find boundaries: manual detection ("man")
 # force boundaries to separately annotated landmarks (e.g. from Praat's TextGrid)
@@ -63,7 +62,29 @@ if(detetor_type == "man") boundetect <- which(!is.na(comp_df$interval_bounds))
 ###
 comp_df$bound[boundetect] <- comp_df$t[boundetect]
 
+files <- comp_df$file
+files <- files[!duplicated(files)==TRUE]
+detect_sel_file <- files[2] # or: "filename" 
+detect_single <- dplyr::filter(comp_df, file==detect_sel_file)
+
+# plot derivatives to adjust automatic detector
+ggplot(detect_single, aes(x=t)) +
+##### Periodic energy (smog_ppXXHz)
+  geom_line(aes(y=(smog_pp20Hz*(f0_stim_min))),color="red", alpha=.4, size=1.5) +
+#### boundaries
+  geom_hline(yintercept = 0, size=.2, alpha=.5) +
+  geom_vline(aes(xintercept=detect_single$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.7) +
+  geom_vline(aes(xintercept=detect_single$bound), linetype="longdash", color="red", size=1.5, alpha=.2) +
+##### Derivatives
+  geom_line(aes(y=smog_pp_1st_der*2),color="black", alpha=.4, size=1) +
+  geom_line(aes(y=smog_pp_2nd_der*2),color="gold", alpha=.8, size=1) +
+##### annotations
+  geom_text(aes(x=detect_single$interval_mid, y=f0_stim_min+10, label=as.character(label), check_overlap=T), size=4, color="black", family= "Avenir") + 
+  theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
+
 ```
+
+The following are a set of functions that are based on the boundary detection above (*bound_detector* chunk) and computations within and across resulting intervals (in the following *run_fun* chunk). We measure the area under the periodic energy curve (*AUC*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy curve (*CoM*) and *synchrony* between centers.
 
 ```{r run_fun, warning=FALSE, echo=FALSE}
 
@@ -105,13 +126,13 @@ markMap <- function(.x,.f,...) {
 ### Caculation functions (specific)
 # Area Under the Curve (AUC/mass relating to prosodic strength)
 AUC <- function(df) {
-  x <- round(sum(df$smog_pp_rel,na.rm = T),1) 
+  x <- round(sum(df$smog_pp20Hz,na.rm = T),1) 
   x
 }
 
 # Center of Mass (center of syllabic masses)
 CoM <- function(df) {
-  round(sum(df$smog_pp_rel*df$t,na.rm=T) / sum(df$smog_pp_rel,na.rm=T))
+  round(sum(df$smog_pp20Hz*df$t,na.rm=T) / sum(df$smog_pp20Hz,na.rm=T))
 }
 
 # Center of Gravity (center of F0 slope)
@@ -120,7 +141,7 @@ CoG <- function(df) {
   # f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
   # round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
   f0Floor <- min(df$f0_smooth_interp, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
-  round(sum((df$f0_smooth_interp - f0Floor) * df$t * df$smog_pp_rel, na.rm=T) / sum((df$f0_smooth_interp - f0Floor) * df$smog_pp_rel, na.rm=T))
+  round(sum((df$f0_smooth_interp - f0Floor) * df$t * df$smog_pp20Hz, na.rm=T) / sum((df$f0_smooth_interp - f0Floor) * df$smog_pp20Hz, na.rm=T))
 }
 
 # F0 and periodic energy values at centers
@@ -128,8 +149,8 @@ CoG <- function(df) {
 # f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
 f0atCoM <- function(df) df$f0_smooth_interp[df$t == round(df$CoM)] 
 f0atCoG <- function(df) df$f0_smooth_interp[df$t == round(df$CoG)]
-PERatCoM <- function(df) round(df$smog_pp_rel[df$t == round(df$CoM)],4)
-PERatCoG <- function(df) round(df$smog_pp_rel[df$t == round(df$CoG)],4)
+PERatCoM <- function(df) round(df$smog_pp20Hz[df$t == round(df$CoM)],4)
+PERatCoG <- function(df) round(df$smog_pp20Hz[df$t == round(df$CoG)],4)
 
 # Synchrony between CoG and CoM: 
 # synCoM calcualtes CoG w.r.t. CoM
@@ -164,32 +185,17 @@ comp_df <- mutate(group_by(comp_df,file),
                   # synCoI is calcualted as CoG in relation to 'interval_mid'
                   synCoI = ifelse(!is.na(interval_mid), CoG - interval_mid, NA),
                   scaling = ifelse((!is.na(bound) & bound>min(bound, na.rm = T) & !is.na(f0atCoM)), scaling, NA),
-                  AUC_rel = round(AUC / (round(round(sum(smog_pp_rel,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
-                  CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))),CoM,NA),
-                  CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))),CoG,NA)
+                  AUC_rel = round(AUC / (round(round(sum(smog_pp20Hz,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
+                  CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
+                  CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA)
                   )
 
 ```
 
-```{r plot, warning=FALSE}
+```{r plotvv, warning=FALSE}
 
-files <- comp_df$file
-files <- files[!duplicated(files)==TRUE]
-sel_file <- files[5] # or: "filename" 
+sel_file <- files[2] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
-
-# observe derivatives to adjust automatic detector
-ggplot(single_stim, aes(x=t)) +
-##### Periodic energy (smog_pp)
-  geom_line(aes(y=(smog_pp_rel*(f0_stim_min-50))+50),color="red", alpha=.5, size=1.5) +
-#### boundaries
-  geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.5) +
-  geom_vline(aes(xintercept=single_stim$bound), linetype="solid", color="red", size=1.5, alpha=.3) + 
-##### Derivatives
-  geom_line(aes(y=smog_pp_1st_der*1000),color="black", alpha=.5, size=.5) +
-  geom_line(aes(y=smog_pp_2nd_der*50),color="green", alpha=.8, size=.5) +
-  theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
-
 
 plot_comp <-
   ggplot(single_stim, aes(x=t)) +
@@ -199,9 +205,9 @@ plot_comp <-
 ## interpolated
   # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
 ## periogram (smog_pp)
-  geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp_rel, size=single_stim$smog_pp_rel*3.5) +
+  geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp20Hz, size=single_stim$smog_pp20Hz*3.5) +
 ##### Periodic energy (smog_pp)
-  geom_line(aes(y=(smog_pp_rel*(f0_stim_min-50))+50),color="red", alpha=.5, size=.5) +
+  geom_line(aes(y=(smog_pp20Hz*(f0_stim_min-50))+50),color="red", alpha=.5, size=.5) +
 #### boundaries
   geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="black", size=.5, alpha=.5) +
   geom_vline(aes(xintercept=single_stim$bound), linetype="solid", color="red", size=.5, alpha=.3) + 
@@ -210,7 +216,7 @@ plot_comp <-
   geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG, yend=PERatCoG*(f0_stim_min-50)+50), position = "dodge", color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round") +
   # geom_segment(aes(x=f0peak_t, xend=f0peak_t, y=f0_stim_max-10, yend=f0_stim_max+10), position = "dodge", color="#E066FF", size=1, alpha=.8, linetype = "solid", lineend = "round") +
 #### annotations
-  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+30, label=label, check_overlap=T), color="black", size=7, family= "Times") +
+  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+30, label=label, check_overlap=T), color="black", size=5, family= "Avenir") +
   geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=95, label="Scaling (difference in Hz):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
   geom_text(aes(x=single_stim$CoM, y=95, label=round(scaling)), check_overlap=T, color="black", size=3, family= "Helvetica") + 
   geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-5, y=75, label="Synchrony (distance in ms):"), check_overlap=T, color="black", size=3, family= "Helvetica", hjust="right") + 
