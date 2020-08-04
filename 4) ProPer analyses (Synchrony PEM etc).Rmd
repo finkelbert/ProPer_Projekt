@@ -20,7 +20,7 @@ comp_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all =
 
 ```
 
-Initial chunk deals with boundary detection -- either adjustable automatic detection ("auto") or an external manual segmentation (man")
+Initial chunk is dedicated to boundary detection -- either adjustable automatic detection ("auto") or external manual segmentation ("man").
 
 ```{r bound_detector, warning=FALSE, echo=FALSE}
 
@@ -192,7 +192,7 @@ comp_df <- mutate(group_by(comp_df,file),
 
 ```
 
-```{r plotvv, warning=FALSE}
+```{r plot, warning=FALSE}
 
 sel_file <- files[3] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
@@ -203,7 +203,7 @@ plot_comp <-
 ## smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
 ## interpolated
-  geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
+  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
 ## periogram (smog_pp)
   geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp20Hz, size=single_stim$smog_pp20Hz*3.5) +
 ##### Periodic energy (smog_pp)
