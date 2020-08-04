@@ -6,11 +6,10 @@ Adjust the periodic energy and FO curves and create their visual interaction, a.
 rm(list = ls())
 
 ## Load required libraries 
-library(ggplot2)
-library(dplyr)
-library(seewave)
-library(utf8)
-library(Cairo)
+require(ggplot2)
+require(dplyr)
+require(seewave)
+require(Cairo)
 ```
 
 ```{r read_raw_df, warning=FALSE}
@@ -129,7 +128,7 @@ periogram_all <-
 ## boundaries
   geom_vline(aes(xintercept=main_df$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=main_df$interval_mid, y=f0_stim_max+10, label=as_utf8(as.character(label)), check_overlap=T), color="white", size=2, family= "Avenir") +
+  geom_text(aes(x=main_df$interval_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), color="white", size=2, family= "Avenir") +
 ## plot stuff
   facet_wrap(~file, strip.position = "top", scales = "free") +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
@@ -188,7 +187,7 @@ periogram_single <-
 ## boundaries
   geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+10, label=as_utf8(as.character(label)), check_overlap=T), size=4, color="white", family= "Avenir") + 
+  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), size=4, color="white", family= "Avenir") + 
 ## plot stuff
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(), axis.ticks = element_blank()) 
 print(periogram_single)
