@@ -9,6 +9,7 @@ rm(list = ls())
 require(ggplot2)
 require(dplyr)
 require(seewave)
+require(purrr)
 require(Cairo)
 
 ```
@@ -23,7 +24,7 @@ Initial chunk deals with boundary detection -- either adjustable automatic detec
 
 ```{r bound_detector, warning=FALSE, echo=FALSE}
 
-detection_sensitivity <- 8  # choose values from 5 to 20 (low-pass smooth in Hz), 
+detection_sensitivity <- 9  # choose values from 5 to 20 (low-pass smooth in Hz), 
                             # for coarse to fine automatic boundary detection
 detetor_type <- c("auto","man")[1]  # choose detection type: automatic or manual
 sampleRate <- 1000  # (100 -- 44100) number of data points per second
@@ -44,7 +45,7 @@ if(detetor_type == "auto") boundetect <- which(
      ## locate positive maxima in the 2nd derivative
      comp_df$smog_pp_2nd_der > 0.1 & 
      ## eliminate elbows:
-     lead(comp_df$smog_pp_1st_der,30) > 0 &
+     lead(comp_df$smog_pp_1st_der,25) > -0.1 &
      ## (continue)
      comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,1) &
      comp_df$smog_pp_2nd_der > lag(comp_df$smog_pp_2nd_der,10) &
@@ -64,7 +65,7 @@ comp_df$bound[boundetect] <- comp_df$t[boundetect]
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
-detect_sel_file <- files[2] # or: "filename" 
+detect_sel_file <- files[3] # or: "filename" 
 detect_single <- dplyr::filter(comp_df, file==detect_sel_file)
 
 # plot derivatives to adjust automatic detector
@@ -126,27 +127,29 @@ markMap <- function(.x,.f,...) {
 ### Caculation functions (specific)
 # Area Under the Curve (AUC/mass relating to prosodic strength)
 AUC <- function(df) {
-  x <- round(sum(df$smog_pp20Hz,na.rm = T),1) 
+  x <- round(sum(df$smog_pp20Hz, na.rm=T),1) 
   x
 }
 
 # Center of Mass (center of syllabic masses)
 CoM <- function(df) {
-  round(sum(df$smog_pp20Hz*df$t,na.rm=T) / sum(df$smog_pp20Hz,na.rm=T))
+  round(sum(df$smog_pp20Hz * df$t, na.rm=T) / sum(df$smog_pp20Hz, na.rm=T))
 }
 
-# Center of Gravity (center of F0 slope)
+# Center of Gravity (center of F0 slope) 
+# CoG uses the interpolated F0 multiplied by the corresponding periodic energy fraction (0--1)
+# To avoid quantal biases, the F0 in each region of interest is reduced as follows:
+# 1. the local F0 minimum is found and from it we sbtract 10% of the F0 range;
+# 2. this floor constant (1) is sbtracted from F0 at each point.
+# To conclude, F0 in CoG is both modulated by periodic energy and normalized for absolute values.
+# sum(trimmedInterpF0 * smog_pp * time) / sum(trimmedInterpF0 * smog_pp)
 CoG <- function(df) {
   # set the floor of the F0 curve: local minima minus 10th of the overall range
-  # f0Floor <- min(df$f0_smooth, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
-  # round(sum((df$f0_smooth-f0Floor)*df$t,na.rm=T) / sum(df$f0_smooth-f0Floor,na.rm=T))
-  f0Floor <- min(df$f0_smooth_interp, na.rm=T)-.1*(df$f0_stim_max-df$f0_stim_min) 
+  f0Floor <- min(df$f0_smooth_interp, na.rm=T) - .1*(df$f0_stim_max-df$f0_stim_min) 
   round(sum((df$f0_smooth_interp - f0Floor) * df$t * df$smog_pp20Hz, na.rm=T) / sum((df$f0_smooth_interp - f0Floor) * df$smog_pp20Hz, na.rm=T))
 }
 
 # F0 and periodic energy values at centers
-# f0atCoM <- function(df) df$f0_smooth[df$t == round(df$CoM)] 
-# f0atCoG <- function(df) df$f0_smooth[df$t == round(df$CoG)]
 f0atCoM <- function(df) df$f0_smooth_interp[df$t == round(df$CoM)] 
 f0atCoG <- function(df) df$f0_smooth_interp[df$t == round(df$CoG)]
 PERatCoM <- function(df) round(df$smog_pp20Hz[df$t == round(df$CoM)],4)
@@ -181,11 +184,8 @@ comp_df$scaling[boundetect] <- scalingList
 
 # add, clean and scale parameters
 comp_df <- mutate(group_by(comp_df,file),
-                  # Synchrony between CoG and Center of Interval (CoI): 
-                  # synCoI is calcualted as CoG in relation to 'interval_mid'
-                  synCoI = ifelse(!is.na(interval_mid), CoG - interval_mid, NA),
-                  scaling = ifelse((!is.na(bound) & bound>min(bound, na.rm = T) & !is.na(f0atCoM)), scaling, NA),
-                  AUC_rel = round(AUC / (round(round(sum(smog_pp20Hz,na.rm = T),1) / length(levels(as.factor(CoM))),1)), 2),
+                  scaling = ifelse((!is.na(bound) & bound>min(bound, na.rm=T) & !is.na(f0atCoM)), scaling, NA),
+                  AUC_rel = round(AUC / (round(round(sum(smog_pp20Hz, na.rm=T), 1) / length(levels(as.factor(CoM))), 1)), 2),
                   CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
                   CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA)
                   )
@@ -194,7 +194,7 @@ comp_df <- mutate(group_by(comp_df,file),
 
 ```{r plotvv, warning=FALSE}
 
-sel_file <- files[2] # or: "filename" 
+sel_file <- files[3] # or: "filename" 
 single_stim <- dplyr::filter(comp_df, file==sel_file)
 
 plot_comp <-
@@ -203,7 +203,7 @@ plot_comp <-
 ## smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
 ## interpolated
-  # geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
+  geom_point(aes(y=f0_smooth_interp),color="red", alpha=.3, size=.3) +
 ## periogram (smog_pp)
   geom_line(aes(y=f0_smooth_interp),color="blue", alpha=single_stim$smog_pp20Hz, size=single_stim$smog_pp20Hz*3.5) +
 ##### Periodic energy (smog_pp)
@@ -230,7 +230,8 @@ plot_comp <-
   geom_segment(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-10, xend=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-10, y=140, yend=160), color="blue", size=.3, alpha=.8, linetype = "dotdash", lineend = "round", position = "dodge") +
   geom_text(aes(x=min(single_stim$bound,single_stim$interval_bounds,na.rm = T)-20, y=150), label="CoG", color="blue", alpha=1, size=3, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
 #### plot stuff
-  xlim(-150, max(single_stim$bound, na.rm = T)+100) +
+  xlim(-150, max(single_stim$t)) +
+  # xlim(-150, max(single_stim$bound, na.rm = T)+100) +
   # facet_wrap(~file, scales = "free", ncol = 2) + #, scales = "free"
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
