@@ -27,12 +27,12 @@ form Input parameters
         sentence OutDirPitchTier xxx/praat_data/pitch_tiers/
         sentence OutDirIntensityTier xxx/praat_data/intensity_tiers/
         comment Manually inspect F0 for corrections?
-        boolean inspect 0 
+        boolean inspect 1 
         comment F0 path finder settings (adjustable).
         real silenceThr 0.03
-        real voicingThr 0.45
-        real octave 0.01
-        real octavejump 0.35
+        real voicingThr 0.2
+        real octave 0.02
+        real octavejump 0.5
         real voiceunvoiced 0.14
         integer pitchmax 600
         comment F0 smoothing bandwidth (Hz).
