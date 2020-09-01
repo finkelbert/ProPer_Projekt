@@ -254,7 +254,7 @@ plot_comp <-
   xlim(-150, max(single_stim$t)) +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
-ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
+# ggsave(plot_comp, file=paste0("plots/",sel_file,"_",detetor_type,"_plot_comp.pdf"),device=cairo_pdf)
 
 ```
 
