@@ -1,6 +1,6 @@
 # ProPer visualization (III): *Periograms*
 
-Adjust the periodic energy and FO curves and create their visual interaction, a.k.a. *Periodgram*.
+Adjust the periodic energy and FO curves and create their visual interaction, a.k.a. *Periogram*.
 
 ```{r clean_start}
 rm(list = ls())
