@@ -126,9 +126,9 @@ periogram_all <-
   geom_line(aes(y=periodicNRG*100-floorDiff),color="slategray4", alpha=.7, size=1) +
 ####### TextGrids boundaries and labels (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=main_df$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  geom_vline(aes(xintercept=main_df$seg_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=main_df$interval_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), color="white", size=2, family= "Helvetica") +
+  geom_text(aes(x=main_df$seg_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), color="white", size=2, family= "Helvetica") +
 ## plot stuff
   facet_wrap(~file, strip.position = "top", scales = "free") +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
@@ -185,9 +185,9 @@ periogram_single <-
   # geom_line(aes(y=periodicNRG*100-floorDiff),color="slategray4", alpha=.7, size=1) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=single_stim$interval_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  geom_vline(aes(xintercept=single_stim$seg_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=single_stim$interval_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), size=4, color="white", family= "Helvetica") + 
+  geom_text(aes(x=single_stim$seg_mid, y=f0_stim_max+10, label=as.character(label), check_overlap=T), size=4, color="white", family= "Helvetica") + 
 ## plot stuff
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(), axis.ticks = element_blank()) 
 print(periogram_single)
