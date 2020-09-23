@@ -59,7 +59,7 @@ if(detetor_type == "auto") boundetect <- which(
 
 ### Find boundaries: manual detection ("man")
 # force boundaries to separately annotated landmarks (e.g. from Praat's TextGrid)
-if(detetor_type == "man") boundetect <- which(!is.na(comp_df$seg_bounds))
+if(detetor_type == "man") boundetect <- which(!is.na(comp_df$seg_start))
 
 ### add to dataframe
 comp_df$bound[boundetect] <- comp_df$t[boundetect]
@@ -75,7 +75,7 @@ ggplot(detect_single, aes(x=t)) +
   geom_line(aes(y=smog_pp20Hz*100),color="red", alpha=.4, size=1.5) +
 #### boundaries
   geom_hline(yintercept = 0, size=.2, alpha=.5) +
-  geom_vline(aes(xintercept=detect_single$seg_bounds), linetype="dotted", color="black", size=.5, alpha=.7) +
+  geom_vline(aes(xintercept=detect_single$seg_start), linetype="dotted", color="black", size=.5, alpha=.7) +
   # geom_vline(aes(xintercept=detect_single$bound), linetype="longdash", color="red", size=1.5, alpha=.2) +
   geom_segment(aes(x=bound, xend=bound, y=0, yend=100), position = "dodge", color="red", size=1, alpha=.5, linetype = "solid", lineend = "round") +
 ##### Derivatives
@@ -216,7 +216,7 @@ plot_comp <-
   # geom_line(aes(y=(smog_pp20Hz*(perCeiling-50))+50),color="red", alpha=.75, size=.5) +
   geom_line(aes(y=smog_pp20Hz*100-floorDiff),color="red", alpha=.75, size=.5) +
 ####################### boundaries
-  geom_segment(aes(x=seg_bounds, xend=seg_bounds, y=0-floorDiff, yend=f0_stim_max+30), position = "dodge", color="black", size=.5, alpha=.5, linetype = "dotted", lineend = "round") +
+  geom_segment(aes(x=seg_start, xend=seg_start, y=0-floorDiff, yend=f0_stim_max+30), position = "dodge", color="black", size=.5, alpha=.5, linetype = "dotted", lineend = "round") +
   geom_segment(aes(x=bound, xend=bound, y=0-floorDiff, yend=f0_stim_max+15), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
 ####################### landmarks 
   ##### CoMs
@@ -236,20 +236,20 @@ plot_comp <-
   geom_text(aes(x=single_stim$CoM, y=0-floorDiff-10, label=AUC_rel), check_overlap=T, color="black", size=2, family= "Helvetica") +
 ####################### legend
   ##### CoGs
-  geom_segment(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, xend=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-20, yend=f0_stim_max), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-20, y=f0_stim_max-10), label="CoG", color="blue", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_segment(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, xend=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-20, yend=f0_stim_max), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-20, y=f0_stim_max-10), label="CoG", color="blue", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   ##### CoMs
-  geom_segment(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, xend=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-50, yend=f0_stim_max-30), color="red", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-20, y=f0_stim_max-40), label="CoM", color="red", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_segment(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, xend=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-50, yend=f0_stim_max-30), color="red", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-20, y=f0_stim_max-40), label="CoM", color="red", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   ##### Synchrony
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-70), label="Synchrony", check_overlap=T, color="purple", size=2.5, family= "Helvetica", hjust="right") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-80), label="fall < 0 < rise", check_overlap=T, color="purple", size=2, family= "Helvetica", hjust="right") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-70), label="Synchrony", check_overlap=T, color="purple", size=2.5, family= "Helvetica", hjust="right") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-80), label="fall < 0 < rise", check_overlap=T, color="purple", size=2, family= "Helvetica", hjust="right") +
   ##### Scaling / F0 @ CoM
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-100), label="Scaling", color="red", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-10, y=f0_stim_max-110), label="low < 0 < high", color="red", alpha=1, size=2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-100), label="Scaling", color="red", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-10, y=f0_stim_max-110), label="low < 0 < high", color="red", alpha=1, size=2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   ##### PEM
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-5, y=0-floorDiff-5), label="PEM", check_overlap=T, color="black", size=2.5, family= "Helvetica", hjust="right") + 
-  geom_text(aes(x=min(single_stim$bound,single_stim$seg_bounds,na.rm = T)-5, y=0-floorDiff-15, label="weak < 1 < strong"), check_overlap=T, color="black", size=2, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-5, y=0-floorDiff-5), label="PEM", check_overlap=T, color="black", size=2.5, family= "Helvetica", hjust="right") + 
+  geom_text(aes(x=min(single_stim$bound,single_stim$seg_start,na.rm = T)-5, y=0-floorDiff-15, label="weak < 1 < strong"), check_overlap=T, color="black", size=2, family= "Helvetica", hjust="right") + 
 ####################### plot stuff
   xlim(-150, max(single_stim$t)) +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
