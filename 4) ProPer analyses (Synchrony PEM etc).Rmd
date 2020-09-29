@@ -76,6 +76,7 @@ ggplot(detect_single, aes(x=t)) +
 #### boundaries
   geom_hline(yintercept = 0, size=.2, alpha=.5) +
   geom_vline(aes(xintercept=detect_single$seg_start), linetype="dotted", color="black", size=.5, alpha=.7) +
+  geom_vline(aes(xintercept=max(detect_single$seg_end, na.rm = T)), linetype="dotted", color="black", size=.5, alpha=.7) +
   # geom_vline(aes(xintercept=detect_single$bound), linetype="longdash", color="red", size=1.5, alpha=.2) +
   geom_segment(aes(x=bound, xend=bound, y=0, yend=100), position = "dodge", color="red", size=1, alpha=.5, linetype = "solid", lineend = "round") +
 ##### Derivatives
@@ -216,7 +217,10 @@ plot_comp <-
   # geom_line(aes(y=(smog_pp20Hz*(perCeiling-50))+50),color="red", alpha=.75, size=.5) +
   geom_line(aes(y=smog_pp20Hz*100-floorDiff),color="red", alpha=.75, size=.5) +
 ####################### boundaries
-  geom_segment(aes(x=seg_start, xend=seg_start, y=0-floorDiff, yend=f0_stim_max+30), position = "dodge", color="black", size=.5, alpha=.5, linetype = "dotted", lineend = "round") +
+  geom_vline(aes(xintercept=single_stim$seg_start), linetype="dotted", color="black", size=.5, alpha=.7) +
+  geom_vline(aes(xintercept=max(single_stim$seg_end, na.rm = T)), linetype="dotted", color="black", size=.5, alpha=.7) +
+  # geom_segment(aes(x=seg_start, xend=seg_start, y=0-floorDiff, yend=f0_stim_max+30), color="black", size=.5, alpha=.5, linetype = "dotted", lineend = "round") +
+  # geom_segment(aes(x=max(seg_end,na.rm = T), xend=max(seg_end,na.rm = T), y=0-floorDiff, yend=f0_stim_max+30), color="black", linetype = "dotted", lineend = "round") +
   geom_segment(aes(x=bound, xend=bound, y=0-floorDiff, yend=f0_stim_max+15), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
 ####################### landmarks 
   ##### CoMs
