@@ -17,7 +17,7 @@ require(dplyr)
 ##### Intensity (get intensity data)
 files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
 intensity_df <- plyr::ldply(files_intensity, function(f){  
-  filename <- str_match(f,"//(.*)\\.IntensityTier")
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   intensitier <- it.read(f)
   time = round(intensitier$t,3)*1000
@@ -26,17 +26,19 @@ intensity_df <- plyr::ldply(files_intensity, function(f){
 
 ##### Full-time (get the full time of the file from the intensity tier)
 full_time_df <- plyr::ldply(files_intensity, function(f){  
-  filename <- str_match(f,"//(.*)\\.IntensityTier")
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
+  # filename2 <- str_match(f,".*/([^/._]*)_([^/._]*)\\.[^/]*$")
+  # speaker <- filename2[,3] 
   it <- it.read(f)
   time <- seq(it[["tmin"]], it[["tmax"]], 0.001) * 1000
-  data.frame(file, t=as.integer(as.character(time)))
+  data.frame(file, t=as.integer(as.character(time)))#, speaker)
 })
 
 ##### F0: Pitch Tier (get the smooth F0 curve)
 files_pt_clean <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
 f0_smooth_df <- plyr::ldply(files_pt_clean, function(f){  
-  filename <- str_match(f,"//(.*)\\.PitchTier")
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   pt <- pt.read(f)
   time = round(pt[["t"]],3)*1000
@@ -48,7 +50,7 @@ f0_smooth_df <- plyr::ldply(files_pt_clean, function(f){
 ## (This may take time to process!!!)
 files_pitch_object <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
 pitch_object_df <- plyr::ldply(files_pitch_object, function(f){  
-  filename <- str_match(f,"//(.*)\\.Pitch")
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   pitch_object <- pitch.read(f)
   time <- round(pitch_object$t,3)*1000
@@ -69,7 +71,7 @@ pitch_object_df <- plyr::ldply(files_pitch_object, function(f){
 ##### TextGrids are optional! By default, TextGrids are expected with a single interval tier, 'seg', demarcating segments/syllables/words...
 files_textgrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
 if(length(files_textgrid)>0) tg_df <- plyr::ldply(files_textgrid, function(f){
-  filename <- str_match(f,"//(.*)\\.TextGrid")
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2]
   tg <- tg.read(f, encoding = "auto")
   seg_tier <- data.frame(tg$seg)
