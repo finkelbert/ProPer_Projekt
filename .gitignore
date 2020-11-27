@@ -1,6 +1,5 @@
 # beta workflows and local backups
-TMPER*
-BACKU*
+noshareno/
 
 # Preview files
 *.html
