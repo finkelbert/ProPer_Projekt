@@ -12,10 +12,10 @@
 **Compatibility issues**
 
 * **File names**  
-  + File names should not include special characters (e.g. IPA or umlauts), as well as spaces or dots. It is recommended to use an uderscore to separate filename items (e.g. *interrogative_speaker1_sentence1.wav*)
+  + File names should not include special characters (e.g. IPA or umlauts), as well as spaces or dots. It is recommended to use an uderscore to separate filename elements (e.g. *interrogative_speaker1_sentence1.wav*)
 
 * **Audio**  
-  + Audio files should be preferably mono, non-compressed (e.g. PCM such as *.wav* or *.aiff*) with up to 44.1kHz sample-rate and 16-24 bit depth.
+  + Audio files should be preferably mono, non-compressed (e.g. PCM such as *.wav* or *.aiff*) with 16-24 bit depth and up to 44.1kHz sample-rate. Make sure that the sample-rate is identical in all your audio files (if not, reduce all to the lowest value available)
 
   + It is recommended to normalize the loudness of all audio files to the same target BEFORE the Praat analysis takes place. This could be a simple average target (e.g. *RMS*) or a more advanced Loudness Unit target (*LU*). In both cases the recommeded value is -23 given dBFS for an RMS-based target or LUFS for the LU target (FS = full scale, where '0' is the maximal posiible value). Freely available loudness normalization can be done with [Audacity](https://www.audacityteam.org/) where it is also possible to batch process many files via *macros*. Note that the LUFS normaliztion is found under *Effect -> Loudness Normalization -> perceived loudness*. It should be set to -23LUFS, and you should deselect "Treat mono as dual-mono" since this will actually result in a -26LUFS. That said, whatever you choose, the important thing is that the target value will be consistent throughout the data.
 
