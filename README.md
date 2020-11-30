@@ -1,16 +1,42 @@
 # ProPer
 ### PROsodic analysis with PERiodic energy
 #### A workflow for periodic energy extraction and usage (with Praat and R)  
-*Aviad Albert, Francesco Cangemi & Martine Grice*  
+*Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice*  
 {a.albert/fcangemi/martine.grice}\@uni-koeln.de
 
+---
+
 ## Instructions for the ProPer workflow
+
+### 0. Before you begin
+**Compatibility issues**
+
+* **File names**  
+  + File names should not include special characters (e.g. IPA or umlauts), as well as spaces or dots. It is recommended to use an uderscore to separate filename items (e.g. *interrogative_speaker1_sentence1.wav*)
+
+* **Audio**  
+  + Audio files should be preferably mono, non-compressed (e.g. PCM such as *.wav* or *.aiff*) with up to 44.1kHz sample-rate and 16-24 bit depth.
+
+  + It is recommended to normalize the loudness of all audio files to the same target BEFORE the Praat analysis takes place. This could be a simple average target (e.g. *RMS*) or a more advanced Loudness Unit target (*LU*). In both cases the recommeded value is -23 given dBFS for an RMS-based target or LUFS for the LU target (FS = full scale, where '0' is the maximal posiible value). Freely available loudness normalization can be done with [Audacity](https://www.audacityteam.org/) where it is also possible to batch process many files via *macros*. Note that the LUFS normaliztion is found under *Effect -> Loudness Normalization -> perceived loudness*. It should be set to -23LUFS, and you should deselect "Treat mono as dual-mono" since this will actually result in a -26LUFS. That said, whatever you choose, the important thing is that the target value will be consistent throughout the data.
+
+  + Audio files should have at least 200 ms without a signal (i.e. without acoustic material that needs to be analyzed) on both ends -- initial and final. This is due to some Praat analysis limitations at file edges. If this distance is not available on file, you can insert additional silence to the audio file (see, e.g., [here](http://www.ddaidone.com/uploads/1/0/5/2/105292729/insert_silence_at_start_of_all_files_in_folder.txt) and [here](http://www.ddaidone.com/uploads/1/0/5/2/105292729/insert_silence_at_end_of_all_files_in_folder.txt))
+
+* **TextGrids**  
+  + If you need to extend existing TextGrids by 200 ms on both sides (assuming that the corresponding audio had to change to satisfy Praat's limitations), the following Praat script commands can help:  
+`Extend time: 0.2, "End"`  
+`Extend time: 0.2, "Start"`  
+`Shift times by: 0.2`
+
+  + Avoid special characters (e.g. IPA or umlauts) in the TextGrid's tiers. For smooth interface with the R codes, it is also advised to (a) manually segment syllable-sized intervals, and (b) leave empty intervals without text if they are not marking a syllable of interest (e.g. first and last TextGrid intervals should be empty). The automatic detection of syllabic boundaries in ProPer can make use of this manual information for best results.
+
+---
+
 If you have *RStudio*, it is recommended to open the R project `ProPer_Projekt.Rproj` in order to manange all the files in this workflow (otherwise use the individual .Rmd files within the folder) and proceed as follows:
 
-### 1) ProPer pre-preparation: Acoustics-to-Praat
+### 1. ProPer pre-preparation: Acoustics-to-Praat
 **Data extraction from Praat (Praat script)**
 
-Copy the Praat script from `1) ProPer pre-preparation (Acoustics-to-Praat).praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (preferably PCM with 44.1kHz sample-rate and 16-24 bit depth).
+Copy the Praat script from `1) ProPer pre-preparation (Acoustics-to-Praat).praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (see notes on audio compatability issues above).
 
 We use the pitch objects in Praat to extract the *periodic fraction* of the signal via the strength of the pitch candidates, denoting the strength of similarity in the auto-correlation from 0 to 1. To eventually get the *periodic power*, the periodic fraction is multiplied by the *total power*, which we derive from the intensity tier. To keep things consistent, the parameters that determine Praat's intensity and pitch candidates analysis are "hard-coded" to the script (i.e. their values are given in constant numbers and they don't show up in the form). The parameters that appear in the form can only change Praat's F0 path finding algorithm, which influences Praat's choice of F0 among the given candidates. These can be freely adjusted to optimize F0 detection without affecting the periodic power reading.
 
@@ -41,7 +67,7 @@ The final interpolated F0 is smoothed with a 6Hz low-pass filter (166.7 ms inter
 
 Use the plots at the end of the file to inspect the data and adjust the thresholds before saving the *main_df* table.
 
-### 4) ProPer analyses: Synchrony, PEM, etc.
+### 4) ProPer analyses: Synchrony, Mass, etc.
 **Perform computations on the data (create `comp_df.csv`)**
 
 The codes in `4) ProPer analyses (Synchrony PEM etc).Rmd` are designed to extract quantifiable data using periodic energy (see Cangemi et al. 2019). It starts with a boundary detector to locate the syllabic boundaries. We use an automatic method, based on 1st and 2nd derivatives of the periodic energy curve to locate relevant minima. The following computations are performed within and across the resulting intervals:
