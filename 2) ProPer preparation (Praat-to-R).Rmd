@@ -79,8 +79,12 @@ if(length(files_textgrid)>0) tg_df <- plyr::ldply(files_textgrid, function(f){
   t2 <- ifelse(seg_tier$label=="", NA, round(seg_tier$t2,3)*1000)
   t_mid <- round((t1+t2)/2)
   label <- seg_tier$label
-  data.frame(file, t=as.integer(as.character(t1)), seg_start=as.integer(as.character(t1)), seg_mid=as.integer(as.character(t_mid)), seg_end=as.integer(as.character(t2)), label)
+  data.frame(file, t=as.integer(as.character(t1)), seg_start=as.integer(as.character(t1)), seg_mid=as.integer(as.character(t_mid)), seg_end=as.integer(as.character(t2)), seg_bounds=as.integer(as.character(t1)), label)
 })
+if(length(files_textgrid)>0) tg_df <- mutate(group_by(tg_df,file),
+                                             seg_bounds = ifelse((is.na(seg_bounds) & !is.na(lag(seg_end,1))), lag(seg_end,1), seg_bounds),
+                                             t = seg_bounds
+                                             )
 
 ##### Combine all data
 raw_df <- left_join(full_time_df, f0_smooth_df, by = c("file", "t"))
