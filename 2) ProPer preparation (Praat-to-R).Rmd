@@ -11,10 +11,11 @@ require(stringr)
 require(dplyr)
 ```
 
-```{r prepare_raw_df, warning=FALSE}
-## Read and collect Praat data into R tables
+```{r pre_prepare_raw_df, warning=FALSE}
+##########--- Read and collect Praat data into R tables ---########## 
 
-##### Intensity (get intensity data)
+##### Intensity 
+# (get intensity data)
 files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
 intensity_df <- plyr::ldply(files_intensity, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
@@ -24,20 +25,22 @@ intensity_df <- plyr::ldply(files_intensity, function(f){
   data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,3))
 })
 
-##### Full-time (get the full time of the file from the intensity tier)
-full_time_df <- plyr::ldply(files_intensity, function(f){  
+##### Full-time 
+# (get the full time of the file from the intensity tier)
+fullTime_df <- plyr::ldply(files_intensity, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
-  # filename2 <- str_match(f,".*/([^/._]*)_([^/._]*)\\.[^/]*$")
-  # speaker <- filename2[,3] 
+  filenameBits <- str_match(f,".*/([^/._]*)_([^/._]*)\\.[^/]*$")
+  speaker <- filenameBits[,2]
   it <- it.read(f)
   time <- seq(it[["tmin"]], it[["tmax"]], 0.001) * 1000
-  data.frame(file, t=as.integer(as.character(time)))#, speaker)
+  data.frame(file, t=as.integer(as.character(time)), speaker)
 })
 
-##### F0: Pitch Tier (get the smooth F0 curve)
-files_pt_clean <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
-f0_smooth_df <- plyr::ldply(files_pt_clean, function(f){  
+##### F0: Pitch Tier 
+# (get the smooth F0 curve)
+files_pitchTier <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
+f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   pt <- pt.read(f)
@@ -46,10 +49,11 @@ f0_smooth_df <- plyr::ldply(files_pt_clean, function(f){
   data.frame(file, t=as.integer(as.character(time)), f0_smooth=round(f0,2)) 
 })
 
-##### Pitch object: Strength (i.e. the periodic fraction from Praat's autocorrelation) and frequency of selected pitch candidates; rowmax = highest strength value within the frequency range (up to 'pitch_ceiling'); row1 = Praat's path finder choice for F0 candidates
-## (This may take time to process!!!)
-files_pitch_object <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
-pitch_object_df <- plyr::ldply(files_pitch_object, function(f){  
+##### Pitch object  
+# (get the Strength, i.e. the periodic fraction from Praat's autocorrelation, and frequency of selected pitch candidates: rowmax = highest strength value within the frequency range (up to 'pitch_ceiling'); row1 = Praat's path finder choice for F0 candidates
+# (Note: this may take longer to process!!!)
+files_pitchObject <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
+pitchObject_df <- plyr::ldply(files_pitchObject, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   pitch_object <- pitch.read(f)
@@ -67,30 +71,74 @@ pitch_object_df <- plyr::ldply(files_pitch_object, function(f){
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
   data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,5), f0_row1=round(f0_row1,1), strength_rowmax=round(strength_rowmax,5))
 })
+```
 
-##### TextGrids are optional! By default, TextGrids are expected with a single interval tier, 'seg', demarcating segments/syllables/words...
-files_textgrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
-if(length(files_textgrid)>0) tg_df <- plyr::ldply(files_textgrid, function(f){
+```{r pre_prepare_TextGrids_Syllable, warning=FALSE}
+
+##### TextGrid
+# TextGrids are optional! They are useful for exposition and to improve the automatic detection. By default, TextGrids are expected with at least one interval tier demarcating syllabic boundaries
+#
+files_textGrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
+# The following chunk takes syllabic intervals and labels from the "Syllable" tier
+if(length(files_textGrid)>0) textGridSyll_df <- plyr::ldply(files_textGrid, function(f){
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2]
   tg <- tg.read(f, encoding = "auto")
-  seg_tier <- data.frame(tg$seg)
-  t1 <- ifelse(seg_tier$label=="", NA, round(seg_tier$t1,3)*1000)
-  t2 <- ifelse(seg_tier$label=="", NA, round(seg_tier$t2,3)*1000)
+  syll_tier <- data.frame(tg$Syllable)
+  t1 <- ifelse(syll_tier$label=="", NA, round(syll_tier$t1,3)*1000)
+  t2 <- ifelse(syll_tier$label=="", NA, round(syll_tier$t2,3)*1000)
   t_mid <- round((t1+t2)/2)
-  label <- seg_tier$label
-  data.frame(file, t=as.integer(as.character(t1)), seg_start=as.integer(as.character(t1)), seg_mid=as.integer(as.character(t_mid)), seg_end=as.integer(as.character(t2)), seg_bounds=as.integer(as.character(t1)), label)
+  syll_label <- syll_tier$label
+  data.frame(file, t=as.integer(as.character(t1)), syll_start=as.integer(as.character(t1)), syll_mid=as.integer(as.character(t_mid)), syll_end=as.integer(as.character(t2)), syll_bounds=as.integer(as.character(t1)), syll_label)
 })
-if(length(files_textgrid)>0) tg_df <- mutate(group_by(tg_df,file),
-                                             seg_bounds = ifelse((is.na(seg_bounds) & !is.na(lag(seg_end,1))), lag(seg_end,1), seg_bounds),
-                                             t = seg_bounds
-                                             )
+if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
+  group_by(textGridSyll_df,file),
+  syll_bounds = ifelse(
+    (is.na(syll_bounds) & !is.na(lag(syll_end,1))),
+    lag(syll_end,1), 
+    syll_bounds),
+  t = syll_bounds
+  )
+#
+if(exists("textGridSyll_df")) textGridSyll_df <- filter(textGridSyll_df, !is.na(t))
+
+```
+
+```{r pre_prepare_TextGrids_Word, warning=FALSE}
+
+# The following chunk takes word intervals and labels from the "Word" tier (for exposition purposes)
+if(length(files_textGrid)>0) textGridWord_df <- plyr::ldply(files_textGrid, function(f){
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
+  file <- filename[,2]
+  tg <- tg.read(f, encoding = "auto")
+  word_tier <- data.frame(tg$Word)
+  word_t1 <- ifelse(word_tier$label=="", NA, round(word_tier$t1,3)*1000)
+  word_t2 <- ifelse(word_tier$label=="", NA, round(word_tier$t2,3)*1000)
+  word_t_mid <- round((word_t1+word_t2)/2)
+  word_label <- word_tier$label
+  data.frame(file, t=as.integer(as.character(word_t1)), word_start=as.integer(as.character(word_t1)), word_mid=as.integer(as.character(word_t_mid)), word_end=as.integer(as.character(word_t2)), word_bounds=as.integer(as.character(word_t1)), word_label)
+})
+if(exists("textGridWord_df")) textGridWord_df <- mutate(
+  group_by(textGridWord_df,file),
+  word_bounds = ifelse(
+    (is.na(word_bounds) & !is.na(lag(word_end,1))),
+    lag(word_end,1), 
+    word_bounds),
+  t = word_bounds
+  )
+#
+if(exists("textGridWord_df")) textGridWord_df <- filter(textGridWord_df, !is.na(t))
+  
+```
+
+```{r prepare_raw_df, warning=FALSE}
 
 ##### Combine all data
-raw_df <- left_join(full_time_df, f0_smooth_df, by = c("file", "t"))
+raw_df <- left_join(fullTime_df, f0_smooth_df, by = c("file", "t"))
 raw_df <- left_join(raw_df, intensity_df, by = c("file", "t"))
-raw_df <- left_join(raw_df, pitch_object_df, by = c("file", "t"))
-if(length(files_textgrid)>0) raw_df <- left_join(raw_df, tg_df, by = c("file", "t"))
+raw_df <- left_join(raw_df, pitchObject_df, by = c("file", "t"))
+if(exists("textGridSyll_df")) raw_df <- left_join(raw_df, textGridSyll_df, by = c("file", "t"))
+if(exists("textGridWord_df")) raw_df <- left_join(raw_df, textGridWord_df, by = c("file", "t"))
 
 ##### Calculate and add the total-power and the periodic-power vectors
 raw_df <- mutate(group_by(raw_df,file),
@@ -98,6 +146,9 @@ raw_df <- mutate(group_by(raw_df,file),
                   periodic_power = total_power * strength_rowmax
                   )
 
+```
+
+```{r write_raw_df, warning=FALSE}
 ##### Write the raw data
 write.csv(raw_df, "data_tables/raw_df.csv", row.names=FALSE)
 ```
