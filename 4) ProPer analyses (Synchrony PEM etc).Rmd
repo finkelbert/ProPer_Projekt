@@ -1,6 +1,6 @@
-# ProPer analyses (IV): *Synchrony*, *Scaling* & *Mass*
+# ProPer analyses (IV): *Synchrony*, *Scaling*, *Mass* and *Speech-rate*
 
-Quantifying continuous prosody with periodic energy and F0 data to describe pitch contours (*Synchrony* and *Scaling*) and quantify prosodic strength (*Mass*).
+Quantifying continuous prosody with periodic energy and F0 data to quantify prosodic strength (*Mass*), to describe pitch contours (using *Synchrony* within intervals and *Scaling* between intervals) and to calculate local *Speech-rate*.
 
 ```{r clean_start}
 rm(list = ls())
@@ -52,7 +52,7 @@ condMap <- function(cond,f,arguments,combf) {
     cond %>% combf(f(argument)) -> cond
   cond
 }
-##
+## determine the distance in ms (both sides) for valid local peaks
 Lags <- c(1,10,20,25,30,40,50)
 ##
 mkBoundetect <- function(single_stim) {
@@ -64,7 +64,9 @@ mkBoundetect <- function(single_stim) {
     condMap( ssscmpf(lag),  Lags, andCond ) %>%
     condMap( ssscmpf(lead), Lags, andCond ) %>%
     andCond(
+      ## determine left distance (in ms) from manual boundaries
       single_stim$t < single_stim$syll_boundsSeq +75 |
+      ## determine right distance (in ms) from manual boundaries
       single_stim$t < lead(single_stim$syll_boundsSeq, 75)
     ) %>%
     which()
@@ -146,20 +148,19 @@ boundetected <- which(!is.na(comp_df$auto_bounds))
 ```
 
 
-```{r plotdetectest, warning=FALSE}
+```{r plotDetecTest, warning=FALSE}
 
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
 
-####--for loops, intro-start--####
 ##################################
+########### loop start ###########
 plyr::ldply(files, function(f){
 detect_sel_file <- f
-####--for loops, intro-end--####
 ##################################
-#
-####--(manual single, non-loop)--####
+
 #####################################
+###### manual singles, no-loop ######
 # detect_sel_file <- files[4] # or: "filename"
 #####################################
 
@@ -184,16 +185,14 @@ print(singleBounds)
 ##--save?
 ggsave(singleBounds, file=paste0("plots/",detect_sel_file,"_autoBoundsPlot.pdf"),device=cairo_pdf)
 
-####--for loops, outro-start--####
 ##################################
+############ loop end ############
 })
-####--for loops, outro-end--####
 ##################################
 
 ```
 
-The following are a set of functions that are based on the boundary detection above (*boundary_detection* chunk) and computations within and across resulting intervals (in the following *run_fun* chunk). We measure the area under the periodic energy curve (*AUC*/*mass*), the center of gravity of F0 (*CoG*), the center of mass of the periodic energy mass (*CoM*) and *synchrony* between centers.
-
+The following are a set of functions that are based on the boundary detection above (*boundary_detection* chunk) and computations within and across resulting intervals (in the following *run_fun* chunk). We measure the area under the periodic energy curve (*mass*), and the center of mass of the periodic energy curve (*CoM*). We calculate local *speech-rate* in terms of the temporal distance between consecutive CoMs, and we calcualte *scaling* as the F0 distance between consecutive CoMs. We also locate the center of gravity of F0 (*CoG*), and we calcualte *synchrony* as the distance between centers (CoG - CoM).
 
 ```{r run_fun, warning=FALSE, echo=FALSE}
 
@@ -238,17 +237,9 @@ markMap <- function(.x,.f,...) {
   .x
   }
 #
-# Center of Mass (center of syllabic masses)
-CoM <- function(df) {
-  # print(df)
-  ifelse(
-    round(sum(df$smogPP_20Hz, na.rm=T)) == 0, 0,
-    round(sum(df$smogPP_20Hz * df$t, na.rm=T) / sum(df$smogPP_20Hz, na.rm=T)))
-  }
-#
 ### Caculation functions (specific)
-# Area Under the Curve (AUC/mass relating to prosodic strength)
-AUC <- function(df) {
+# Area Under the Curve ('mass' relating to prosodic strength)
+mass <- function(df) {
   x <- round(sum(df$smogPP_20Hz, na.rm=T),1) 
   x
   }
@@ -257,6 +248,14 @@ AUC <- function(df) {
 intervalDuration <- function(df) {
   x <- length(which(df$smogPP_20Hz > 0)) 
   x
+  }
+#
+# Center of Mass (center of syllabic masses)
+CoM <- function(df) {
+  # print(df)
+  ifelse(
+    round(sum(df$smogPP_20Hz, na.rm=T)) == 0, 0,
+    round(sum(df$smogPP_20Hz * df$t, na.rm=T) / sum(df$smogPP_20Hz, na.rm=T)))
   }
 #
 # Center of Gravity (center of F0 slope) 
@@ -280,7 +279,8 @@ synchrony <- function(df) {
   round(df$CoG - df$CoM)
 }
 #
-comp_df$AUC <- NULL
+# delete in case of re-runs
+comp_df$mass <- NULL
 comp_df$intervalDuration <- NULL
 comp_df$CoM <- NULL
 comp_df$CoG <- NULL
@@ -289,9 +289,10 @@ comp_df$f0atCoG <- NULL
 comp_df$PERatCoM <- NULL
 comp_df$PERatCoG <- NULL
 comp_df$synchrony <- NULL
-### Map to main (for specific functions)
+#
+### Map specific functions to dataframe
 intervals %>%
-  markMap(intervalKalk(AUC,"AUC")) %>%
+  markMap(intervalKalk(mass,"mass")) %>%
   markMap(intervalKalk(intervalDuration,"intervalDuration")) %>%
   markMap(intervalKalk(CoM,"CoM")) %>%
   markMap(intervalKalk(CoG,"CoG")) %>%
@@ -301,6 +302,7 @@ intervals %>%
   markMap(intervalKalk(PERatCoG,"PERatCoG")) %>%
   markMap(intervalKalk(synchrony,"synchrony"))
 #
+# change '0's to 'NA's
 comp_df <- mutate(
   group_by(comp_df,file),
   CoM = ifelse(CoM==0, NA, CoM),
@@ -319,103 +321,68 @@ scalingList <- f0atCoM_list
 scalingList[relevantFluct_i] <- scalist
 comp_df$scaling[boundetected] <- scalingList
 #
-# add, clean and scale parameters
-# comp_df <- mutate(group_by(comp_df, speaker),
-#                   f0_speaker_median = median(f0_smooth, na.rm = T),
-#                   f0_speaker_mean = mean(f0_smooth, na.rm = T)
-#                   )
-#
+##### add, clean and scale parameters
 comp_df <- mutate(
   group_by(comp_df,file),
-                  # f0_stim_median = median(f0_smooth, na.rm = T),
-                  # f0_stim_mean = mean(f0_smooth, na.rm = T),
-                  # f0_stim_range = f0_stim_max - f0_stim_min,
-                  # f0_speaker_range = f0_speaker_max - f0_speaker_min,
+  ## ignore weak intervals
+  CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
+  CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA),
+  ## 'scaling': add stimulus-initial values (realtive to speaker's median F0)
   scaling = ifelse(
     auto_bounds==min(auto_bounds, na.rm=T), f0atCoM - f0_speaker_median, 
     ifelse(
       (!is.na(auto_bounds) & !is.na(f0atCoM)), scaling, NA)),
+  ## 'scaling': stretch observations
   scaling = ifelse(
-    !is.na(AUC), na.locf(scaling, na.rm=F), NA),
+    !is.na(mass), na.locf(scaling, na.rm=F), NA),
+  ## normalize parameters (0--1)
   scale_rel = round((abs(scaling) / f0_speaker_range) * 100, 3),
-  logScale_rel = round(log2(scale_rel+1)+1,3),
-  scaleLabel = ifelse(
-    round(scaling)>0, paste0('+',round(scaling),'Hz (',round(scale_rel),'%)'), 
-    paste0(round(scaling),'Hz (',round(scale_rel),'%)')),
-  #
-  auto_boundsNum = length(which(!is.na(auto_bounds)))-1,
-  # AUC_rel = round(AUC / (sum(smogPP_20Hz, na.rm=T) / syll_boundNum), 2),
-  # AUC_rel = round(AUC / (sum(smogPP_20Hz, na.rm=T) / auto_boundsNum), 2),
-  # AUC_rel = round(AUC / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM)))), 2),
   sync_rel = round((abs(synchrony) / intervalDuration) * 100, 3),
-  # logSync_rel = round(log2(sync_rel+1)+1,3),
-  syncLabel = ifelse(
-    round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(sync_rel),'%)'), 
-    paste0(round(synchrony),' ms (',round(sync_rel),'%)')),
-  # massXsync = AUC_rel * logSync_rel,
-  # massXscale = AUC_rel * logScale_rel,
-  # massXf0 = massXscale + massXsync,
-  CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
-  CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA),
-  #
-  AUC_rel = round(AUC / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 2),
+  mass_rel = round(mass / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 2),
   intervalDuration_rel = ifelse(
     !is.na(intervalDuration), 
     round(intervalDuration / max(intervalDuration, na.rm=T), 3), NA),
-                  # intervalDuration_rel = ifelse(t==CoM & !is.na(CoM), intervalDuration_rel, NA),
-                  # intervalDuration_relInv = ifelse(!is.na(intervalDuration_rel), (intervalDuration_rel*-1) + 1, NA),
-                  # intervalDuration_relInterp = round(pracma::interp1(t, intervalDuration_relInv), 1),
-                  # intervalDuration_relInterpStretch = ifelse((is.na(intervalDuration_relInterp) & 
-                  #                                   t<min(which(!is.na(intervalDuration_relInterp)))),
-                  #                             intervalDuration_relInterp[min(which(!is.na(intervalDuration_relInterp)))],
-                  #                             ifelse((is.na(intervalDuration_relInterp) & 
-                  #                                       t>=max(which(!is.na(intervalDuration_relInterp)))),
-                  #                                    intervalDuration_relInterp[max(which(!is.na(intervalDuration_relInterp)))], intervalDuration_relInterp)),
-                  # intervalDuration_relSmoothInterp = bwfilter(wave = intervalDuration_relInterpStretch, f = sampleRate, to = 2, n = 1),
-                  # intervalDuration_relSmoothInterp = ifelse(!is.na(intervalDuration_relInterp), intervalDuration_relSmoothInterp, NA),
-                  #
-  CoM_seq = na.locf(CoM, na.rm=F),
+  ## create plot-friendly data
+  scaleLabel = ifelse(
+    round(scaling)>0, paste0('+',round(scaling),'Hz (',round(scale_rel),'%)'), 
+    paste0(round(scaling),'Hz (',round(scale_rel),'%)')),
+  syncLabel = ifelse(
+    round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(sync_rel),'%)'), 
+    paste0(round(synchrony),' ms (',round(sync_rel),'%)')),
+  #####################################
+  ############ speech-rate ############
+  #####################################
+  ## 'CoM': stretch observations
+  CoM_seq = na.locf(CoM_corr, na.rm=F),  # CoM_seq = na.locf(CoM, na.rm=F),
+  ## 'CoM: calculate consecutive CoM diffs
   CoM_diff = ifelse(
     !is.na(CoM_corr), CoM_corr - lag(CoM_seq, 2), NA),
-  # CoM_diffBPM = 1000/CoM_diff*10,
+  ## normalize CoM_diff (0--1)
   CoM_diff_rel = ifelse(
     !is.na(CoM_corr), round(CoM_diff / max(CoM_diff, na.rm=T), 3), NA),
-  # CoM_diffBPM = ifelse(
-  #   t == min(CoM_corr, na.rm=T), intervalDuration_rel, CoM_diffBPM),
+  ## 'CoM_diff': add stimulus-initial value (realtive to interval durationss in the stimulus)
   CoM_diff_rel = ifelse(
     t == min(CoM_corr, na.rm=T), intervalDuration_rel, CoM_diff_rel),
-  # CoM_diff_rel = ifelse(
-  #   CoM_corr == min(CoM_corr, na.rm=T), mean(CoM_diff_rel, na.rm=T),
-  #   CoM_diff_rel),
-  # CoM_diffBPM = na.locf(CoM_diffBPM, na.rm=F),
+  ## CoM_diff_rel': stretch observations to keep values @ CoM
   CoM_diff_rel = na.locf(CoM_diff_rel, na.rm=F),
-  # CoM_diffBPM = ifelse(
-  #   t==CoM & !is.na(CoM), CoM_diffBPM, NA),
   CoM_diff_rel = ifelse(
     t==CoM & !is.na(CoM), CoM_diff_rel, NA),
+  ## 'CoM_diff_rel': invert values (1--0)
   CoM_diff_relInv = ifelse(!is.na(CoM_diff_rel), (CoM_diff_rel*-1) + 1, NA),
-  # CoM_diffBPMInterp = pracma::interp1(t, CoM_diffBPM),
+  ## 'CoM_diff_relInv': interpolate values (1--0)
   CoM_diff_relInterp = pracma::interp1(t, CoM_diff_relInv),
-  #
-  # CoM_diffBPMInterpStretch = ifelse(
-  #   (is.na(CoM_diffBPMInterp) & t<min(which(!is.na(CoM_diffBPMInterp)))),
-  #   CoM_diffBPMInterp[min(which(!is.na(CoM_diffBPMInterp)))],
-  #   ifelse(
-  #     (is.na(CoM_diffBPMInterp) & t>=max(which(!is.na(CoM_diffBPMInterp)))),
-  #     CoM_diffBPMInterp[max(which(!is.na(CoM_diffBPMInterp)))], CoM_diffBPMInterp)),
+  ## 'CoM_diff_relInterp': stretch observations before smoothing
   CoM_diff_relInterpStretch = ifelse(
     (is.na(CoM_diff_relInterp) & t<min(which(!is.na(CoM_diff_relInterp)))),
     CoM_diff_relInterp[min(which(!is.na(CoM_diff_relInterp)))],
     ifelse(
       (is.na(CoM_diff_relInterp) & t>=max(which(!is.na(CoM_diff_relInterp)))),
       CoM_diff_relInterp[max(which(!is.na(CoM_diff_relInterp)))], CoM_diff_relInterp)),
-  # CoM_diffBPMSmoothInterp = bwfilter(wave = CoM_diffBPMInterpStretch, f = 1000, to = 2, n = 1),
+  ## 'CoM_diff_relInterpStretch': smooth and unstretch
   CoM_diff_relSmoothInterp = bwfilter(wave = CoM_diff_relInterpStretch, f = 1000, to = 2, n = 1),
-  # CoM_diffBPMSmoothInterp = ifelse(
-  #   !is.na(CoM_diffBPMInterp), CoM_diffBPMSmoothInterp, NA),
   CoM_diff_relSmoothInterp = ifelse(
     !is.na(CoM_diff_relInterp), CoM_diff_relSmoothInterp, NA)
-                  )
+  )
 
 ```
 
@@ -425,15 +392,14 @@ comp_df <- mutate(
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
 
-####--for loops, intro-start--####
 ##################################
+########### loop start ###########
 plyr::ldply(files, function(f){
 sel_file <- f
-####--for loops, intro-end--####
 ##################################
-#
-####--(manual single, non-loop)--####
+
 #####################################
+###### manual singles, no-loop ######
 # sel_file <- files[3] # or: "filename"
 #####################################
 
@@ -444,7 +410,6 @@ maxBounds <- max(single_stim$auto_bounds,single_stim$syll_bounds,na.rm = T)
 minBounds <- min(single_stim$auto_bounds,single_stim$syll_bounds,na.rm = T)
 midLow <- round(single_stim$f0_stim_min[1]-single_stim$f0_stim_range[1]/2)
 midHigh <- round(single_stim$f0_stim_max[1]-single_stim$f0_stim_range[1]/2)
-
 
 plot_comp <-
   ggplot(single_stim, aes(x=t)) +
@@ -477,7 +442,7 @@ plot_comp <-
   ##### Synchrony
   geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="purple", size=2, family= "Helvetica") +
   ##### Mass
-  geom_text(aes(x=single_stim$CoM, y=plotFloor-plotUnits, label=AUC_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
+  geom_text(aes(x=single_stim$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
 ####################### legend
   ##### CoGs
   geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midHigh-plotUnits*3, yend=midHigh+plotUnits*3), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
@@ -502,10 +467,9 @@ print(plot_comp)
 ##--save?
 ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pdf)
 
-####--for loops, outro-start--####
 ##################################
+############ loop end ############
 })
-####--for loops, outro-end--####
 ##################################
 
 
