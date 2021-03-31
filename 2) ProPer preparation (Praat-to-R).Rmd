@@ -22,7 +22,7 @@ intensity_df <- plyr::ldply(files_intensity, function(f){
   file <- filename[,2] 
   intensitier <- it.read(f)
   time = round(intensitier$t,3)*1000
-  data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,3))
+  data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,4))
 })
 
 ##### Full-time 
@@ -69,7 +69,7 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   strength_limited[, -1] <- mapply(`*`, strengthArray[, -1], zero_one_freqs[, -1])
   strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
-  data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,5), f0_row1=round(f0_row1,1), strength_rowmax=round(strength_rowmax,5))
+  data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,7), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
 })
 ```
 
@@ -142,8 +142,8 @@ if(exists("textGridWord_df")) raw_df <- left_join(raw_df, textGridWord_df, by = 
 
 ##### Calculate and add the total-power and the periodic-power vectors
 raw_df <- mutate(group_by(raw_df,file),
-                  total_power = 4e-10 * 10^(intensity / 10),
-                  periodic_power = total_power * strength_rowmax
+                  total_power = round(4e-10 * 10^(intensity / 10), 9),
+                  periodic_power = round(total_power * strength_rowmax, 9)
                   )
 
 ```
