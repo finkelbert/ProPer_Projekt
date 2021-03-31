@@ -1,0 +1,1 @@
+Temporary data tables from R go in this folder.

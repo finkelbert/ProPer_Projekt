@@ -1,3 +1,6 @@
+# data tables
+*.csv
+
 # beta workflows and local backups
 noshareno/
 
