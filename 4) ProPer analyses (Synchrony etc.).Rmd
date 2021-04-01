@@ -380,7 +380,7 @@ comp_df <- mutate(
       CoM_diff_relInterp[max(which(!is.na(CoM_diff_relInterp)))], CoM_diff_relInterp)),
   ## 'CoM_diff_relInterpStretch': smooth and unstretch
   CoM_diff_relSmoothInterp = bwfilter(wave = CoM_diff_relInterpStretch, f = 1000, to = 2, n = 1),
-  CoM_diff_relSmoothInterp = ifelse(
+  localSpeechRate = ifelse(
     !is.na(CoM_diff_relInterp), CoM_diff_relSmoothInterp, NA)
   )
 
@@ -423,7 +423,7 @@ plot_comp <-
 ####################### Periodic energy curve
   geom_line(aes(y=smogPP_20Hz*f0_stim_range+plotFloor),color="red", alpha=.75, size=.5) +
 ####################### Speech-rate curve
-  geom_line(aes(y=CoM_diff_relSmoothInterp*f0_stim_range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
+  geom_line(aes(y=localSpeechRate*f0_stim_range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
 ####################### boundaries
   geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0_stim_max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7) +
   # geom_vline(aes(xintercept=single_stim$syll_bounds), linetype="dotted", color="black", size=.5, alpha=.7) +
@@ -475,7 +475,15 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pd
 
 ```
 
+```{r minimize_comp_df}
+
+mini_comp_df <- comp_df[c("file", "t", "speaker", "syll_mid", "syll_bounds", "syll_label", "word_mid", "word_bounds", "word_label", "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_stim_min", "f0_stim_max", "f0_stim_median", "f0_stim_mean", "f0_stim_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", "syll_boundsSeq", "auto_bounds", "scaling", "auto_boundsSeq", "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "scale_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "scaleLabel", "syncLabel", "CoM_seq", "localSpeechRate")]
+
+mini_comp_df <- droplevels(mini_comp_df)
+
+```
+
 ```{r write_comp_df}
 ## Write the computation data file
-write.csv(comp_df, "data_tables/comp_df.csv", row.names=FALSE)
+write.csv(mini_comp_df, "data_tables/comp_df.csv", row.names=FALSE)
 ```
