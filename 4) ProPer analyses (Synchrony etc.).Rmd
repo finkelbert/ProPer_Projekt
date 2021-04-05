@@ -254,7 +254,7 @@ intervalDuration <- function(df) {
 CoM <- function(df) {
   # print(df)
   ifelse(
-    round(sum(df$smogPP_20Hz, na.rm=T)) == 0, 0,
+    sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
     round(sum(df$smogPP_20Hz * df$t, na.rm=T) / sum(df$smogPP_20Hz, na.rm=T)))
   }
 #
@@ -264,7 +264,7 @@ CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
   f0Floor <- min(df$f0_interp_stretch_smooth, na.rm=T) - .2 * df$f0_stim_range 
   ifelse(
-    round(sum(df$smogPP_20Hz, na.rm=T)) == 0, 0, 
+    sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
     round(sum((df$f0_interp_stretch_smooth - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_interp_stretch_smooth - f0Floor) * df$smogPP_20Hz, na.rm=T)))
   }
 #
