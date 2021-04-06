@@ -426,7 +426,6 @@ plot_comp <-
   geom_line(aes(y=localSpeechRate*f0_stim_range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
 ####################### boundaries
   geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0_stim_max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7) +
-  # geom_vline(aes(xintercept=single_stim$syll_bounds), linetype="dotted", color="black", size=.5, alpha=.7) +
   geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0_stim_max+plotUnits*9), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
 ####################### landmarks 
   ##### CoMs
