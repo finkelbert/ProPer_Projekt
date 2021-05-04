@@ -10,7 +10,7 @@
 ## Instructions for the ProPer workflow
 (last update: 5 April 2021)
 
-### 0. Hauke, Before you begin
+### 0. Before you begin
 ##### Compatibility issues
 
 **File names**  
