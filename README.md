@@ -86,7 +86,7 @@ Use the plots in the code chunks to inspect the data and adjust the thresholds b
 ### 4) ProPer analyses: Synchrony etc.
 ##### Detect intervals and perform computations on the data (create `comp_df.csv`)
 
-The codes in `4) ProPer analyses (Synchrony etc.).Rmd` are designed to extract ProPer quantifiable data on F0 shape (*Synchrony* and *Scaling*), prosodic prominence (*Mass*) and local *Speech-rate* (see Cangemi et al. 2019 on Synchrony). It starts with a boundary detector to locate the intervals of interest. Then, a suite of functions are mapped to the syllabic intervals to calculate the different parameters. Finally, dense plots with superimposed data are being produced for presentation and verification before saving the *comp_df* data frame as a .csv table. 
+The codes in `4) ProPer analyses (Synchrony etc.).Rmd` are designed to extract ProPer quantifiable data on F0 shape (*Synchrony* and *∆F0*/*DeltaF0*), prosodic prominence (*Mass*) and local *Speech-rate* (see Cangemi et al. 2019 on Synchrony). It starts with a boundary detector to locate the intervals of interest. Then, a suite of functions are mapped to the syllabic intervals to calculate the different parameters. Finally, dense plots with superimposed data are being produced for presentation and verification before saving the *comp_df* data frame as a .csv table. 
 
 The automatic boundary detector is designed to locate local minima in the periodic energy curve while also taking into account information from the optional "Syllable" tier in a corresponding TextGrid. Manual segmentation can guide the automatic detector and help in targeting specific syllables of interest and is therefore highly recommended for ProPer analyses.
 
@@ -96,7 +96,7 @@ The automatic boundary detector is designed to locate local minima in the period
 + **CoM**: The Center of Mass of periodic energy within intervals. 
 + **CoG**: The Center of Gravity of F0 within intervals (related to the Tonal Center of Gravity; Barnes et al. 2012).
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables (rising/falling/level).
-+ **Scaling**: We measure F0 within each interval at the center of mass of periodic energy (CoM), and we compute *scaling* in terms of the difference in F0 from previous interval to reflect the F0 shape across syllables. For the first interval we compute the difference from the speaker's median F0.
++ **∆F0/DeltaF0**: We measure F0 within each interval at the center of mass of periodic energy (CoM), and we compute *∆F0*/*DeltaF0* in terms of the difference in F0 from previous interval to reflect the F0 shape across syllables. For the first interval we compute the difference from the speaker's median F0.
 + **Speech-rate**: We calculate the temporal distance between consecutive CoMs to yield a local speech-rate curve. For the first interval we compute the relative duration compared to the maximal interval duration in the same speech item.
 
 ***
