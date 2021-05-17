@@ -99,22 +99,7 @@ for (sensitivity in sensitivities) {
   ee %>% trySensitivity(sensitivity) -> ee
   if (length(ee$boundetect) >= expSyllNum) break
 }
-# e %>%
-#   trySensitivity(2) %>%
-#   trySensitivity(3) %>%
-#   trySensitivity(4) %>%
-#   trySensitivity(5) %>%
-#   trySensitivity(6) %>%
-#   trySensitivity(7) %>%
-#   trySensitivity(8) %>%
-#   trySensitivity(9) %>%
-#   trySensitivity(10) %>%
-#   trySensitivity(11) %>%
-#   trySensitivity(12) %>%
-#   trySensitivity(13) %>%
-#   trySensitivity(14) %>%
-#   trySensitivity(15) %>%
-#   nop() -> ee
+#
 single_stim <- ee$single_stim
 boundetect <- ee$boundetect
 # 
