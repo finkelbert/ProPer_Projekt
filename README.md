@@ -1,6 +1,6 @@
-# ProPer
-### PROsodic analysis with PERiodic energy
-#### A workflow for periodic energy extraction and usage (with Praat and R)  
+
+![](https://finkelbert.files.wordpress.com/2021/06/proper-logo-combined2-600.png)  
+
 *Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice*  
 *IƒL - Phonetik, University of Cologne, Germany*  
 {a.albert/fcangemi/t.m.ellison/martine.grice}\@uni-koeln.de
@@ -8,7 +8,8 @@
 ---
 
 ## Instructions for the ProPer workflow
-(last update: 5 April 2021)
+#### (requires Praat and R)
+(last update: 16 June 2021)
 
 ### 0. Before you begin
 ##### Compatibility issues
