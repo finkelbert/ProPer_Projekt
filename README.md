@@ -2,7 +2,6 @@
 
 *Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice*  
 *IƒL - Phonetik, University of Cologne, Germany*  
-{a.albert/fcangemi/t.m.ellison/martine.grice}\@uni-koeln.de
 
 ---
 
