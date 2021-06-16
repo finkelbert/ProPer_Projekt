@@ -1,16 +1,17 @@
 ![](https://finkelbert.files.wordpress.com/2021/06/proper-logo-combined2-600_40small.png)
 
-*Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice*  
-*IƒL - Phonetik, University of Cologne, Germany*  
+Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice  
+*IƒL - Phonetik, University of Cologne*  
 
 ---
 
 ## Instructions for the ProPer workflow
-#### (requires Praat and R)
 (last update: 16 June 2021)
 
 ### 0. Before you begin
-##### Compatibility issues
+
+This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https://www.r-project.org/) ([RStudio](https://www.rstudio.com/) is recomended).  
+
 
 **File names**  
 
