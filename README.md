@@ -1,4 +1,4 @@
-![](https://finkelbert.files.wordpress.com/2021/06/proper-logo-combined2-600_40small.png)
+![](https://finkelbert.files.wordpress.com/2021/06/proper-logo4a-small-tight.png)
 
 Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice  
 *IƒL - Phonetik, University of Cologne*  
