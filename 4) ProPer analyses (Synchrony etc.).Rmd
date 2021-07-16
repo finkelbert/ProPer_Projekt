@@ -18,6 +18,10 @@ main_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all =
 ```
 
 ```{r boundary_detection, warning=FALSE, include=FALSE}
+
+## adjust the maximum allowed distance (in ms) between boundaries that are automatically detected (periodic energy minima) and manually segmented (TextGrid annotation)
+autoMan <- 40 
+
 ## pre-loop
 comp_df <- mutate(
   group_by(main_df, file),
@@ -65,9 +69,9 @@ mkBoundetect <- function(single_stim) {
     condMap( ssscmpf(lead), Lags, andCond ) %>%
     andCond(
       ## determine left distance (in ms) from manual boundaries
-      single_stim$t < single_stim$syll_boundsSeq +75 |
+      single_stim$t < single_stim$syll_boundsSeq +autoMan |
       ## determine right distance (in ms) from manual boundaries
-      single_stim$t < lead(single_stim$syll_boundsSeq, 75)
+      single_stim$t < lead(single_stim$syll_boundsSeq, autoMan)
     ) %>%
     which()
 }
@@ -127,7 +131,7 @@ comp_df <- mutate(
   auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
   # locate missing auto_bounds (where a syll_bound exists)
   auto_bounds = ifelse(
-    (!is.na(syll_bounds) & syll_bounds > auto_boundsSeq +75 & syll_bounds > lead(auto_boundsSeq, 75)),
+    (!is.na(syll_bounds) & syll_bounds > auto_boundsSeq +autoMan & syll_bounds > lead(auto_boundsSeq, autoMan)),
     syll_bounds, auto_bounds),
   # re-stretch the auto_bounds observtions after change
   auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
@@ -327,20 +331,20 @@ comp_df <- mutate(
   ## '∆F0': stretch observations
   DeltaF0 = ifelse(
     !is.na(mass), na.locf(DeltaF0, na.rm=F), NA),
-  ## normalize parameters (0--1)
-  scale_rel = round((abs(DeltaF0) / f0_speaker_range) * 100, 3),
-  sync_rel = round((abs(synchrony) / intervalDuration) * 100, 3),
+  ## normalize parameters 
+  DeltaF0_rel = round((DeltaF0 / f0_speaker_range) * 100, 3),
+  sync_rel = round((synchrony / intervalDuration) * 100, 3),
   mass_rel = round(mass / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 2),
   intervalDuration_rel = ifelse(
     !is.na(intervalDuration), 
     round(intervalDuration / max(intervalDuration, na.rm=T), 3), NA),
   ## create plot-friendly data
-  scaleLabel = ifelse(
-    round(DeltaF0)>0, paste0('+',round(DeltaF0),'Hz (',round(scale_rel),'%)'), 
-    paste0(round(DeltaF0),'Hz (',round(scale_rel),'%)')),
+  DeltaF0Label = ifelse(
+    round(DeltaF0)>0, paste0('+',round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)'), 
+    paste0(round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)')),
   syncLabel = ifelse(
-    round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(sync_rel),'%)'), 
-    paste0(round(synchrony),' ms (',round(sync_rel),'%)')),
+    round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(abs(sync_rel)),'%)'), 
+    paste0(round(synchrony),' ms (',round(abs(sync_rel)),'%)')),
   #####################################
   ############ speech-rate ############
   #####################################
@@ -429,7 +433,7 @@ plot_comp <-
   ##### text
   geom_text(aes(x=single_stim$syll_mid, y=f0_stim_max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica") +
   ##### ∆F0 / F0 @ CoM
-  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=scaleLabel), check_overlap=T, color="blue", size=2, family= "Helvetica") + 
+  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=2, family= "Helvetica") + 
   ##### Synchrony
   geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="purple", size=2, family= "Helvetica") +
   ##### Mass
@@ -468,7 +472,7 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pd
 
 ```{r minimize_comp_df}
 
-mini_comp_df <- comp_df[c("file", "t", "speaker", "syll_mid", "syll_bounds", "syll_label", "word_mid", "word_bounds", "word_label", "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_stim_min", "f0_stim_max", "f0_stim_median", "f0_stim_mean", "f0_stim_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", "syll_boundsSeq", "auto_bounds", "DeltaF0", "auto_boundsSeq", "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "scale_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "scaleLabel", "syncLabel", "CoM_seq", "localSpeechRate")]
+mini_comp_df <- comp_df[c("file", "t", "speaker", "syll_mid", "syll_bounds", "syll_label", "word_mid", "word_bounds", "word_label", "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_stim_min", "f0_stim_max", "f0_stim_median", "f0_stim_mean", "f0_stim_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", "syll_boundsSeq", "auto_bounds", "DeltaF0", "auto_boundsSeq", "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "CoM_seq", "localSpeechRate")]
 
 mini_comp_df <- droplevels(mini_comp_df)
 
