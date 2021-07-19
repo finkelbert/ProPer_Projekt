@@ -20,21 +20,33 @@ raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = T
 
 ```{r prepare_main_df, warning=FALSE}
 main_df <- raw_df
+#
   #####################################
   ############## Presets ##############
   #####################################
 #### set floor for log-transform (1.00 = 100%):
+# adjust to find the most fitting value (change later to choose multiple values)
 perFloor <- .01 # {.001 -- .05} 
-#### anchor for relative measurements (relative to each stimulus, the entire data set, or to pre-defined speaker sets):
-relTo <- c("stim", "data", "speaker")[1] # {[1] -- [3]}
+#
+#### anchor for relative measurements, 
+# relative to the entire data ('data'), each tokeb ('token'), or speaker ('speaker'):
+relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]} choose 'speaker' if applicable
+#
 #### set floor for periodic fraction (1.00 = 100%):
+# keep at 0.25 unless you need this changed
 strengThresh <- 0.25 # {0 -- .5} 
 #
+  #####################################
+  ####### compute new variables #######
+  #####################################
 ## find maximum values for entire data set
-max_data_per_power <- max(raw_df$periodic_power, na.rm=T)
-max_data_strength <- max(raw_df$strength_rowmax, na.rm=T)
-f0_data_min <- min(raw_df$f0_smooth, na.rm=T)
-f0_data_max <- max(raw_df$f0_smooth, na.rm=T)
+main_df <- mutate(
+  group_by(main_df),
+  max_data_per_power <- max(raw_df$periodic_power, na.rm=T),
+  max_data_strength <- max(raw_df$strength_rowmax, na.rm=T),
+  f0_data_min <- min(raw_df$f0_smooth, na.rm=T),
+  f0_data_max <- max(raw_df$f0_smooth, na.rm=T)
+  )
 ## find maximum values for speaker-defined sets (if exist)
 if(length(raw_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   max_speaker_per_power = max(periodic_power, na.rm=T),
@@ -43,27 +55,28 @@ if(length(raw_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   f0_speaker_max = max(f0_smooth, na.rm=T),
   f0_speaker_median = round(median(f0_smooth, na.rm = T),2),
   f0_speaker_mean = round(mean(f0_smooth, na.rm = T),2),
-  f0_speaker_range = round(f0_speaker_max - f0_speaker_min, 2))
-## find maximum values for each stimulus 
+  f0_speaker_range = round(f0_speaker_max - f0_speaker_min, 2)
+  )
+## find maximum values for each token 
 main_df <- mutate(
   group_by(main_df, file),
-  max_stim_per_power = max(periodic_power, na.rm=T),
-  max_stim_strength = max(strength_rowmax, na.rm=T),
-  f0_stim_min = min(f0_smooth, na.rm=T),
-  f0_stim_max = max(f0_smooth, na.rm=T),
-  f0_stim_median = round(median(f0_smooth, na.rm = T),2),
-  f0_stim_mean = round(mean(f0_smooth, na.rm = T),2),
-  f0_stim_range = round(f0_stim_max - f0_stim_min, 2),
+  max_token_per_power = max(periodic_power, na.rm=T),
+  max_token_strength = max(strength_rowmax, na.rm=T),
+  f0_token_min = min(f0_smooth, na.rm=T),
+  f0_token_max = max(f0_smooth, na.rm=T),
+  f0_token_median = round(median(f0_smooth, na.rm = T),2),
+  f0_token_mean = round(mean(f0_smooth, na.rm = T),2),
+  f0_token_range = round(f0_token_max - f0_token_min, 2),
   # variables for plot normalization
-  plotFloor = round(f0_stim_min - f0_stim_range, 2),
+  plotFloor = round(f0_token_min - f0_token_range, 2),
   ## conclude relative anchors and thresholds
   perFloorFix = perFloor, # keep records for potential fix
   perFloor_indeed = ifelse(
-    relTo=="stim", round(max_stim_per_power * perFloor, 10), ifelse(
+    relTo=="token", round(max_token_per_power * perFloor, 10), ifelse(
       relTo=="data", round(max_data_per_power * perFloor, 10), 
       round(max_speaker_per_power * perFloor, 10))),
   strengThresh_indeed = ifelse(
-    relTo=="stim", round(max_stim_strength * strengThresh, 8), ifelse(
+    relTo=="token", round(max_token_strength * strengThresh, 8), ifelse(
       relTo=="data", round(max_data_strength * strengThresh, 8), 
       round(max_speaker_strength * strengThresh, 8))),
   ## create new periodic power vector
@@ -112,7 +125,7 @@ main_df <- mutate(
 
 ```
 
-## plot selected stimuli (detailed review of the data)
+## plot selected tokens (detailed review of the data)
 Use the comment in/out (#) to toggle visualization of different data components.
 
 ```{r plot_singles, warning=FALSE, echo=FALSE}
@@ -130,12 +143,12 @@ sel_file1 <- f
 # sel_file1 <- files[3] # or: "filename"
 #####################################
 
-single_stim1 <- dplyr::filter(main_df, file==sel_file1)
+single_token1 <- dplyr::filter(main_df, file==sel_file1)
 
-plotUnits1 <- round(single_stim1$f0_stim_range[1]/30)
+plotUnits1 <- round(single_token1$f0_token_range[1]/30)
 
 periogram_single1 <-
-  ggplot(single_stim1, aes(x=t)) +
+  ggplot(single_token1, aes(x=t)) +
 ########## F0 curves
 ## pre-smoothed F0 (from pitch object)
   # geom_point(aes(y=f0_row1),color="green", alpha=.5, size=.5) +
@@ -144,35 +157,35 @@ periogram_single1 <-
 ## interpolated & stretched F0 
   # geom_point(aes(y=f0_interp_stretch),color="red", alpha=.3, size=.3) +
 ## periogram (smogPP)
-  geom_line(aes(y=f0_interp_stretch_smooth),color="magenta2", alpha=single_stim1$smogPP_20Hz, size=single_stim1$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_interp_stretch_smooth),color="magenta2", alpha=single_token1$smogPP_20Hz, size=single_token1$smogPP_20Hz*5) +
 ########## Power/intensity
 ## intensity
-  # geom_line(aes(y=intensityRel*f0_stim_range+plotFloor),color="yellow", alpha=.6, size=.5) +
+  # geom_line(aes(y=intensityRel*f0_token_range+plotFloor),color="yellow", alpha=.6, size=.5) +
 ## power
-  # geom_line(aes(y=total_powerRel*f0_stim_range+plotFloor),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
+  # geom_line(aes(y=total_powerRel*f0_token_range+plotFloor),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
 ########## Periodic fraction (strength/HNR)
 ## raw strength (before "strengThresh")
-  # geom_line(aes(y=strength_rowmax*f0_stim_range+plotFloor), color="green", alpha=.2, size=.75, linetype="twodash") +
+  # geom_line(aes(y=strength_rowmax*f0_token_range+plotFloor), color="green", alpha=.2, size=.75, linetype="twodash") +
 ## processed strength  (after "strengThresh")
-  # geom_line(aes(y=periodic_fraction*f0_stim_range+plotFloor), color="tomato", alpha=.7, size=.5, linetype="dotted") +
+  # geom_line(aes(y=periodic_fraction*f0_token_range+plotFloor), color="tomato", alpha=.7, size=.5, linetype="dotted") +
 ########## Periodic power 'pp' (total power * periodic fraction)
-  geom_line(aes(y=postPP_rel*f0_stim_range+plotFloor),color="purple3", alpha=.5, size=.5, linetype="solid") +
+  geom_line(aes(y=postPP_rel*f0_token_range+plotFloor),color="purple3", alpha=.5, size=.5, linetype="solid") +
 ########## Log periodic power 'logPP' (10*log10(PER/per_thresh))
-  # geom_line(aes(y=logPP_rel*f0_stim_range+plotFloor),color="seashell", alpha=.3, size=2, linetype="longdash") +
+  # geom_line(aes(y=logPP_rel*f0_token_range+plotFloor),color="seashell", alpha=.3, size=2, linetype="longdash") +
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
-  geom_line(aes(y=smogPP_20Hz*f0_stim_range+plotFloor),color="lightsteelblue", alpha=.5, size=.75) +
-  # geom_line(aes(y=smogPP_12Hz*f0_stim_range+plotFloor),color="lightyellow", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_8Hz*f0_stim_range+plotFloor),color="moccasin", alpha=.4, size=1.5) +
-  geom_line(aes(y=smogPP_5Hz*f0_stim_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
+  geom_line(aes(y=smogPP_20Hz*f0_token_range+plotFloor),color="lightsteelblue", alpha=.5, size=.75) +
+  # geom_line(aes(y=smogPP_12Hz*f0_token_range+plotFloor),color="lightyellow", alpha=.6, size=1) +
+  # geom_line(aes(y=smogPP_8Hz*f0_token_range+plotFloor),color="moccasin", alpha=.4, size=1.5) +
+  geom_line(aes(y=smogPP_5Hz*f0_token_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=single_stim1$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  geom_vline(aes(xintercept=single_token1$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=single_stim1$syll_mid, y=f0_stim_max+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
+  geom_text(aes(x=single_token1$syll_mid, y=f0_token_max+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
 ## plot stuff
   ggtitle(paste0(sel_file1)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
-  ylim(single_stim1$plotFloor[1],single_stim1$f0_stim_max[1]+plotUnits1*2) +
+  ylim(single_token1$plotFloor[1],single_token1$f0_token_max[1]+plotUnits1*2) +
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
 print(periogram_single1)
 ##--save?
@@ -185,7 +198,7 @@ ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_PERIOGRAM(1).pdf"),dev
 
 ```
 
-## re-adjust selected stimuli: change the perFloor value of specific stimuli
+## re-adjust selected tokens: change the perFloor value of specific tokens
 
 ```{r readjust_singles, warning=FALSE, echo=FALSE}
 
@@ -205,7 +218,7 @@ main_df <- mutate(
   #                      
   #### re-run 
   perFloor_indeed = ifelse(
-    relTo=="stim", round(max_stim_per_power * perFloorFix, 10), ifelse(
+    relTo=="token", round(max_token_per_power * perFloorFix, 10), ifelse(
       relTo=="data", round(max_data_per_power * perFloorFix, 10), 
       round(max_speaker_per_power * perFloorFix, 10))),
   ## log periodic power
@@ -249,33 +262,33 @@ sel_file2 <- f
 # sel_file2 <- files[3] # or: "filename"
 #####################################
 
-single_stim2 <- dplyr::filter(main_df, file==sel_file2)
+single_token2 <- dplyr::filter(main_df, file==sel_file2)
 
-plotUnits2 <- round(single_stim2$f0_stim_range[1]/30)
+plotUnits2 <- round(single_token2$f0_token_range[1]/30)
 
 periogram_single2 <-
-  ggplot(single_stim2, aes(x=t)) +
+  ggplot(single_token2, aes(x=t)) +
 ########## F0 curves
 ## periogram (smogPP)
-  geom_line(aes(y=f0_interp_stretch_smooth),color="magenta2", alpha=single_stim2$smogPP_20Hz, size=single_stim2$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_interp_stretch_smooth),color="magenta2", alpha=single_token2$smogPP_20Hz, size=single_token2$smogPP_20Hz*5) +
 ########## Periodic power 'pp' (total power * periodic fraction)
-  geom_line(aes(y=postPP_rel*f0_stim_range+plotFloor),color="purple3", alpha=.5, size=.5, linetype="solid") +
+  geom_line(aes(y=postPP_rel*f0_token_range+plotFloor),color="purple3", alpha=.5, size=.5, linetype="solid") +
 ########## Log periodic power 'logPP' (10*log10(PER/per_thresh))
-  # geom_line(aes(y=logPP_rel*f0_stim_range+plotFloor),color="seashell", alpha=.3, size=2, linetype="longdash") +
+  # geom_line(aes(y=logPP_rel*f0_token_range+plotFloor),color="seashell", alpha=.3, size=2, linetype="longdash") +
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
-  geom_line(aes(y=smogPP_20Hz*f0_stim_range+plotFloor),color="lightsteelblue", alpha=.5, size=.75) +
-  # geom_line(aes(y=smogPP_12Hz*f0_stim_range+plotFloor),color="lightyellow", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_8Hz*f0_stim_range+plotFloor),color="moccasin", alpha=.4, size=1.5) +
-  geom_line(aes(y=smogPP_5Hz*f0_stim_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
+  geom_line(aes(y=smogPP_20Hz*f0_token_range+plotFloor),color="lightsteelblue", alpha=.5, size=.75) +
+  # geom_line(aes(y=smogPP_12Hz*f0_token_range+plotFloor),color="lightyellow", alpha=.6, size=1) +
+  # geom_line(aes(y=smogPP_8Hz*f0_token_range+plotFloor),color="moccasin", alpha=.4, size=1.5) +
+  geom_line(aes(y=smogPP_5Hz*f0_token_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=single_stim2$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  geom_vline(aes(xintercept=single_token2$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
 ## annotations
-  geom_text(aes(x=single_stim2$syll_mid, y=f0_stim_max+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
+  geom_text(aes(x=single_token2$syll_mid, y=f0_token_max+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
 ## plot stuff
   ggtitle(paste0(sel_file2)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
-  ylim(single_stim2$plotFloor[1],single_stim2$f0_stim_max[1]+plotUnits2*2) +
+  ylim(single_token2$plotFloor[1],single_token2$f0_token_max[1]+plotUnits2*2) +
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
 print(periogram_single2)
 ##--save?
@@ -293,7 +306,7 @@ After reviewing the data and adjusting theresholds, write the main data file for
 
 ```{r minimize_main_df}
 
-mini_main_df <- main_df[c("file","t","speaker","syll_mid","syll_bounds","syll_label","word_mid","word_bounds","word_label","f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_stim_min","f0_stim_max","f0_stim_median","f0_stim_mean","f0_stim_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")]
+mini_main_df <- main_df[c("file","t","speaker","syll_mid","syll_bounds","syll_label","word_mid","word_bounds","word_label","f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_token_min","f0_token_max","f0_token_median","f0_token_mean","f0_token_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")]
 
 mini_main_df <- droplevels(mini_main_df)
 
