@@ -2,7 +2,7 @@
 *.csv
 
 # beta workflows and local backups
-noshareno/
+gitNo/
 
 # Preview files
 *.html
