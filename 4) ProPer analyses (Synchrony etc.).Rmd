@@ -42,10 +42,10 @@ files <- files[!duplicated(files)==TRUE]
 # run_singles <- plyr::ldply(files, function(f) {
 plyr::ldply(files, function(f) {
 sel_file <- f
-single_stim <- dplyr::filter(comp_df, file==sel_file)
-single_stim$boundetect <- c()
+single_token <- dplyr::filter(comp_df, file==sel_file)
+single_token$boundetect <- c()
 # 
-expSyllNum <- length(which(!is.na(single_stim$syll_bounds)))
+expSyllNum <- length(which(!is.na(single_token$syll_bounds)))
 #
 ## == ## == ## == ## == ## == ## == ## == ## == ## == ## == ##
 ## == ## == ## == ## == ## == ## == ## == ## == ## == ## == ##
@@ -59,8 +59,8 @@ condMap <- function(cond,f,arguments,combf) {
 ## determine the distance in ms (both sides) for valid local peaks
 Lags <- c(1,10,20,25,30,40,50)
 ##
-mkBoundetect <- function(single_stim) {
-  sss <- single_stim$smogPP_2ndDerDyn
+mkBoundetect <- function(single_token) {
+  sss <- single_token$smogPP_2ndDerDyn
   ssscmp <- function(x) ( sss > x )
   ssscmpf <- function(f) function(x) ( sss > f(sss,x) )
   TRUE %>%
@@ -69,24 +69,24 @@ mkBoundetect <- function(single_stim) {
     condMap( ssscmpf(lead), Lags, andCond ) %>%
     andCond(
       ## determine left distance (in ms) from manual boundaries
-      single_stim$t < single_stim$syll_boundsSeq +autoMan |
+      single_token$t < single_token$syll_boundsSeq +autoMan |
       ## determine right distance (in ms) from manual boundaries
-      single_stim$t < lead(single_stim$syll_boundsSeq, autoMan)
+      single_token$t < lead(single_token$syll_boundsSeq, autoMan)
     ) %>%
     which()
 }
 #
 trySensitivity <- function(ee, detection_sensitivity) {
-  colnames(ee$single_stim)
+  colnames(ee$single_token)
   if (length(ee$boundetect) >= expSyllNum)
     return( ee )
-  mutate(group_by(ee$single_stim),
+  mutate(group_by(ee$single_token),
          smogPP_2ndDerDyn = bwfilter(
            wave = smogPP_2ndDer,
            f = 1000,
            to = detection_sensitivity,
-           n = 2)) -> ee$single_stim
-  ee$boundetect <- mkBoundetect( ee$single_stim )
+           n = 2)) -> ee$single_token
+  ee$boundetect <- mkBoundetect( ee$single_token )
   ee
 }
 #
@@ -94,7 +94,7 @@ trySensitivity <- function(ee, detection_sensitivity) {
 ## == ## == ## == ## == ## == ## == ## == ## == ## == ## == ##
 #
 e <- new.env()
-e$single_stim <- single_stim
+e$single_token <- single_token
 e$boundetect <- c()
 sensitivityStepSize <- 0.5
 sensitivities <- (1:40) * sensitivityStepSize
@@ -104,24 +104,27 @@ for (sensitivity in sensitivities) {
   if (length(ee$boundetect) >= expSyllNum) break
 }
 #
-single_stim <- ee$single_stim
+single_token <- ee$single_token
 boundetect <- ee$boundetect
 # 
 ## add to dataframe
-single_stim$auto_bounds[boundetect] <- single_stim$t[boundetect]
+single_token$auto_bounds[boundetect] <- single_token$t[boundetect]
 #
 ## write single df 
-write.csv(single_stim,file=paste0("data_tables/single_stims/",sel_file,"_analysis.csv"), row.names=FALSE)
-rm(single_stim,sel_file)
+write.csv(single_token,file=paste0("data_tables/single_tokens/",sel_file,"_analysis.csv"), row.names=FALSE)
+rm(single_token,sel_file)
 })
 #
 ## Read the single df files
-dir_singles <- "data_tables/single_stims/"
+dir_singles <- "data_tables/single_tokens/"
 files <- list.files(path=dir_singles, pattern="*.csv",full.names=T)
 comp_df_comb <- plyr::ldply(files, function(f){  
   singles <- read.csv(f,header=T, sep=",")
 })
 comp_df <- comp_df_comb
+#
+# delete temporary single_token files
+unlink("data_tables/single_tokens/*.csv")
 #
 ## add boundaries at manual 'syll_bounds' if there are no close automatic 'auto_bounds'
 comp_df <- mutate(
@@ -258,7 +261,7 @@ CoM <- function(df) {
 # CoG uses the interpolated F0 multiplied by the corresponding periodic energy fraction (0--1)
 CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
-  f0Floor <- min(df$f0_interp_stretch_smooth, na.rm=T) - .2 * df$f0_stim_range 
+  f0Floor <- min(df$f0_interp_stretch_smooth, na.rm=T) - .2 * df$f0_token_range 
   ifelse(
     sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
     round(sum((df$f0_interp_stretch_smooth - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_interp_stretch_smooth - f0Floor) * df$smogPP_20Hz, na.rm=T)))
@@ -323,7 +326,7 @@ comp_df <- mutate(
   ## ignore weak intervals
   CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
   CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA),
-  ## '∆F0': add stimulus-initial values (realtive to speaker's median F0)
+  ## '∆F0': add token-initial values (realtive to speaker's median F0)
   DeltaF0 = ifelse(
     auto_bounds==min(auto_bounds, na.rm=T), f0atCoM - f0_speaker_median, 
     ifelse(
@@ -356,7 +359,7 @@ comp_df <- mutate(
   ## normalize CoM_diff (0--1)
   CoM_diff_rel = ifelse(
     !is.na(CoM_corr), round(CoM_diff / max(CoM_diff, na.rm=T), 3), NA),
-  ## 'CoM_diff': add stimulus-initial value (realtive to interval durationss in the stimulus)
+  ## 'CoM_diff': add token-initial value (realtive to interval durationss in the tokens)
   CoM_diff_rel = ifelse(
     t == min(CoM_corr, na.rm=T), intervalDuration_rel, CoM_diff_rel),
   ## CoM_diff_rel': stretch observations to keep values @ CoM
@@ -399,45 +402,45 @@ sel_file <- f
 # sel_file <- files[3] # or: "filename"
 #####################################
 
-single_stim <- dplyr::filter(comp_df, file==sel_file)
+single_token <- dplyr::filter(comp_df, file==sel_file)
 
-plotUnits <- round(single_stim$f0_stim_range[1]/30)
-maxBounds <- max(single_stim$auto_bounds,single_stim$syll_bounds,na.rm = T)
-minBounds <- min(single_stim$auto_bounds,single_stim$syll_bounds,na.rm = T)
-midLow <- round(single_stim$f0_stim_min[1]-single_stim$f0_stim_range[1]/2)
-midHigh <- round(single_stim$f0_stim_max[1]-single_stim$f0_stim_range[1]/2)
+plotUnits <- round(single_token$f0_token_range[1]/30)
+maxBounds <- max(single_token$auto_bounds,single_token$syll_bounds,na.rm = T)
+minBounds <- min(single_token$auto_bounds,single_token$syll_bounds,na.rm = T)
+midLow <- round(single_token$f0_token_min[1]-single_token$f0_token_range[1]/2)
+midHigh <- round(single_token$f0_token_max[1]-single_token$f0_token_range[1]/2)
 
 plot_comp <-
-  ggplot(single_stim, aes(x=t)) +
+  ggplot(single_token, aes(x=t)) +
 ####################### F0 curves
   ##### smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
   ##### interpolated
   # geom_point(aes(y=f0_interp_stretch_smooth),color="red", alpha=.3, size=.3) +
   ##### periogram (smogPP)
-  geom_line(aes(y=f0_interp_stretch_smooth),color="blue", alpha=single_stim$smogPP_20Hz, size=single_stim$smogPP_20Hz*3.5) +
+  geom_line(aes(y=f0_interp_stretch_smooth),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
 ####################### Periodic energy curve
-  geom_line(aes(y=smogPP_20Hz*f0_stim_range+plotFloor),color="red", alpha=.75, size=.5) +
+  geom_line(aes(y=smogPP_20Hz*f0_token_range+plotFloor),color="red", alpha=.75, size=.5) +
 ####################### Speech-rate curve
-  geom_line(aes(y=localSpeechRate*f0_stim_range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
+  geom_line(aes(y=localSpeechRate*f0_token_range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
 ####################### boundaries
-  geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0_stim_max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7) +
-  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0_stim_max+plotUnits*9), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
+  geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0_token_max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7) +
+  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0_token_max+plotUnits*9), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
 ####################### landmarks 
   ##### CoMs
-  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=plotFloor, yend=PERatCoM*f0_stim_range+plotFloor), position = "dodge", color="red", size=.5, alpha=.5, linetype = "longdash", lineend = "round") +
+  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=plotFloor, yend=PERatCoM*f0_token_range+plotFloor), position = "dodge", color="red", size=.5, alpha=.5, linetype = "longdash", lineend = "round") +
   geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=f0atCoM+plotUnits*3, yend=f0atCoM-plotUnits*3), position = "dodge", color="red", size=.3, alpha=.9, linetype = "longdash", lineend = "round") +
   ##### CoGs
   geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG+plotUnits*3, yend=f0atCoG-plotUnits*3), position = "dodge", color="blue", size=.3, alpha=.9, linetype = "solid", lineend = "round") +
 ####################### annotations
   ##### text
-  geom_text(aes(x=single_stim$syll_mid, y=f0_stim_max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica") +
+  geom_text(aes(x=single_token$syll_mid, y=f0_token_max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica") +
   ##### ∆F0 / F0 @ CoM
   geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=2, family= "Helvetica") + 
   ##### Synchrony
   geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="purple", size=2, family= "Helvetica") +
   ##### Mass
-  geom_text(aes(x=single_stim$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
+  geom_text(aes(x=single_token$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
 ####################### legend
   ##### CoGs
   geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midHigh-plotUnits*3, yend=midHigh+plotUnits*3), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
@@ -455,8 +458,8 @@ plot_comp <-
   geom_text(aes(x=maxBounds+10, y=midLow+plotUnits), label="Mass", check_overlap=T, color="red", size=2.5, family= "Helvetica", hjust="left") + 
   geom_text(aes(x=maxBounds+10, y=midLow-plotUnits, label="weak < 1 < strong"), check_overlap=T, color="red", size=2, family= "Helvetica", hjust="left") + 
 ####################### plot stuff
-  # xlim(minBounds-100, max(single_stim$t)) +
-  ylim(single_stim$plotFloor[1]-plotUnits, single_stim$f0_stim_max[1]+plotUnits*9) +
+  # xlim(minBounds-100, max(single_token$t)) +
+  ylim(single_token$plotFloor[1]-plotUnits, single_token$f0_token_max[1]+plotUnits*9) +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
 ##--save?
@@ -472,7 +475,7 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pd
 
 ```{r minimize_comp_df}
 
-mini_comp_df <- comp_df[c("file", "t", "speaker", "syll_mid", "syll_bounds", "syll_label", "word_mid", "word_bounds", "word_label", "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_stim_min", "f0_stim_max", "f0_stim_median", "f0_stim_mean", "f0_stim_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", "syll_boundsSeq", "auto_bounds", "DeltaF0", "auto_boundsSeq", "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "CoM_seq", "localSpeechRate")]
+mini_comp_df <- comp_df[c("file", "t", "speaker", "syll_mid", "syll_bounds", "syll_label", "word_mid", "word_bounds", "word_label", "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_token_min", "f0_token_max", "f0_token_median", "f0_token_mean", "f0_token_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", "syll_boundsSeq", "auto_bounds", "DeltaF0", "auto_boundsSeq", "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "CoM_seq", "localSpeechRate")]
 
 mini_comp_df <- droplevels(mini_comp_df)
 
