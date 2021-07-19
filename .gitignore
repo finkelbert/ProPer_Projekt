@@ -4,6 +4,9 @@
 # beta workflows and local backups
 gitNo/
 
+# GitHub page
+*.yml
+
 # Preview files
 *.html
 *.pdf
