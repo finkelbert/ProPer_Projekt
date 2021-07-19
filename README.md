@@ -6,7 +6,7 @@ Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice
 ---
 
 ## Instructions for the ProPer workflow
-(last update: 16 June 2021)
+(last update: 19 July 2021)
 
 ### 0. Before you begin
 
@@ -75,7 +75,7 @@ The first part of `ProPer visualization (Periograms)` presents adjustable preset
 
 + **strengThresh**: Determine the effective floor for the periodic fraction. Values under this threshold do not count as periodic at all (akin to Praat's *voicing threshold*). This floor can be as high as 0.5 (50%) of the autocorrelation similarity strength. However, we recommend keeping it at 0.25 (25%) and only adjust this parameter if you know that it is needed.
 
-+ **relTo**: Choose "stim", "speaker" or "data" to determine if the above-mentioned percentage-based thresholds are calculated for each stimulus relative to itself ("stim"), to speaker-defined sets of the same speaker ("speaker") or, in the case of a single recording session with a single speaker, relative to the whole data set ("data"). 
++ **relTo**: Choose "token", "speaker" or "data" to determine if the above-mentioned percentage-based thresholds are calculated for each token relative to itself ("token"), to speaker-defined sets of the same speaker ("speaker") or, in the case of a single recording session with a single speaker, relative to the whole data set ("data"). 
 
 Note that we create 4 flavors of smoothing for the periodic energy curve. We use low-pass filters of 20Hz, 12Hz, 8Hz and 5Hz to achieve smoothing in intervals of 50, 83, 125 and 200 ms sizes (respectively). The 20Hz smoothing is targeting segmental-size intervals (as short as 50 ms), while the 5Hz smoothing is targeting syllable-size intervals (at 200 ms). We provide 2 more smoothing stages in between those two ends of the spectrum with 8Hz and 12Hz low-pass filters.[^smoothing] 
 
@@ -89,6 +89,8 @@ Use the plots in the code chunks to inspect the data and adjust the thresholds b
 The codes in `4) ProPer analyses (Synchrony etc.).Rmd` are designed to extract ProPer quantifiable data on F0 shape (*Synchrony* and *∆F0*/*DeltaF0*), prosodic prominence (*Mass*) and local *Speech-rate* (see Cangemi et al. 2019 on Synchrony). It starts with a boundary detector to locate the intervals of interest. Then, a suite of functions are mapped to the syllabic intervals to calculate the different parameters. Finally, dense plots with superimposed data are being produced for presentation and verification before saving the *comp_df* data frame as a .csv table. 
 
 The automatic boundary detector is designed to locate local minima in the periodic energy curve while also taking into account information from the optional "Syllable" tier in a corresponding TextGrid. Manual segmentation can guide the automatic detector and help in targeting specific syllables of interest and is therefore highly recommended for ProPer analyses.
+
+You can adjust the variable *autoMan* to determine the amount of permitted distance between automatically located boundaries (auto_bounds) and the manual segmentation from Praat's TextGrid (syll_bounds). The default, 40, means that: (i) when searching automatic boundaries, only points that are not more than 40 ms before OR after a manual boundary are permitted; (ii) if after the automatic procedure there are manual boundaries that have no automatic boundary set both 40 ms before AND after them, a boundary will be added there.
 
 **The following is a brief description of the calculations we perform**:
 
