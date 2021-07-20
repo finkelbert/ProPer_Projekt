@@ -19,7 +19,7 @@ raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = T
 2. Use the following plots and codes to verify and change 'perFloor' values.
 
 ```{r prepare_main_df, warning=FALSE}
-main_df <- raw_df
+main_df <- droplevels(raw_df)
 #
   #####################################
   ############## Presets ##############
@@ -30,7 +30,8 @@ perFloor <- .01 # {.001 -- .05}
 #
 #### anchor for relative measurements, 
 # relative to the entire data ('data'), each tokeb ('token'), or speaker ('speaker'):
-relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]} choose 'speaker' if applicable
+# preferably choose 'speaker' if applicable
+relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]} 
 #
 #### set floor for periodic fraction (1.00 = 100%):
 # keep at 0.25 unless you need this changed
@@ -39,16 +40,16 @@ strengThresh <- 0.25 # {0 -- .5}
   #####################################
   ####### compute new variables #######
   #####################################
-## find maximum values for entire data set
+## find values for entire data set
 main_df <- mutate(
   group_by(main_df),
-  max_data_per_power <- max(raw_df$periodic_power, na.rm=T),
-  max_data_strength <- max(raw_df$strength_rowmax, na.rm=T),
-  f0_data_min <- min(raw_df$f0_smooth, na.rm=T),
-  f0_data_max <- max(raw_df$f0_smooth, na.rm=T)
+  max_data_per_power = max(periodic_power, na.rm=T),
+  max_data_strength = max(strength_rowmax, na.rm=T),
+  f0_data_min = min(f0_smooth, na.rm=T),
+  f0_data_max = max(f0_smooth, na.rm=T)
   )
-## find maximum values for speaker-defined sets (if exist)
-if(length(raw_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
+## find values for speaker-defined sets (if exist)
+if(length(main_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   max_speaker_per_power = max(periodic_power, na.rm=T),
   max_speaker_strength = max(strength_rowmax, na.rm=T),
   f0_speaker_min = min(f0_smooth, na.rm=T),
@@ -57,7 +58,7 @@ if(length(raw_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   f0_speaker_mean = round(mean(f0_smooth, na.rm = T),2),
   f0_speaker_range = round(f0_speaker_max - f0_speaker_min, 2)
   )
-## find maximum values for each token 
+## find values for each token 
 main_df <- mutate(
   group_by(main_df, file),
   max_token_per_power = max(periodic_power, na.rm=T),
@@ -207,10 +208,10 @@ main_df <- mutate(
   group_by(main_df, file),
   #
   perFloorFix = ifelse(
-    file == files[1],    # choose file to change
+    file == files[1],    # choose token to change
     0.004,                # set the new perFloor value
     perFloorFix),
-  #                      # repeat previous 4 lines for each token if necessary
+  #                      # repeat previous 4 lines for each unique perFloor value if necessary
   perFloorFix = ifelse(
     file == files[3],    
     0.04,                
@@ -306,7 +307,14 @@ After reviewing the data and adjusting theresholds, write the main data file for
 
 ```{r minimize_main_df}
 
-mini_main_df <- main_df[c("file","t","speaker","syll_mid","syll_bounds","syll_label","word_mid","word_bounds","word_label","f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_token_min","f0_token_max","f0_token_median","f0_token_mean","f0_token_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")]
+mini_main_df <- main_df[c("file","t","speaker",
+                          if(length(which(!is.na(main_df$syll_mid))) > 0) "syll_mid",
+                          if(length(which(!is.na(main_df$syll_bounds))) > 0) "syll_bounds",
+                          if(length(which(!is.na(main_df$syll_label))) > 0) "syll_label",
+                          if(length(which(!is.na(main_df$word_mid))) > 0) "word_mid",
+                          if(length(which(!is.na(main_df$word_bounds))) > 0) "word_bounds",
+                          if(length(which(!is.na(main_df$word_label))) > 0) "word_label",
+                          "f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_token_min","f0_token_max","f0_token_median","f0_token_mean","f0_token_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")]
 
 mini_main_df <- droplevels(mini_main_df)
 
