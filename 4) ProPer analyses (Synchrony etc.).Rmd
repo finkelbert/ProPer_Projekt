@@ -44,8 +44,8 @@ averageSyll <- 175 # {75 -- 250}
 ## pre-loop
 if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
-  syll_boundsSeq = na.locf(syll_bounds, na.rm=F),
-  syll_boundsSeq = ifelse(is.na(syll_boundsSeq), 0, syll_boundsSeq)
+  syll_boundsSeq = na.locf(syll_bounds, na.rm=F)#,
+  # syll_boundsSeq = ifelse(is.na(syll_boundsSeq), 0, syll_boundsSeq)
   )
 #
 comp_df <- mutate(
@@ -169,14 +169,14 @@ if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
   # stretch auto_bounds observtions to locate missing auto_bounds
   auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
-  auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
+  # auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
   # locate missing auto_bounds (where a syll_bound exists)
   auto_bounds = ifelse(
     (!is.na(syll_bounds) & syll_bounds > auto_boundsSeq +autoMan & syll_bounds > lead(auto_boundsSeq, autoMan)),
     syll_bounds, auto_bounds),
   # re-stretch the auto_bounds observtions after change
-  auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
-  auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq)
+  auto_boundsSeq = na.locf(auto_bounds, na.rm=F)#,
+  # auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq)
   )
 #
 ## re-create the boundaries list
@@ -201,7 +201,7 @@ detect_sel_file <- f
 # detect_sel_file <- files[4] # or: "filename"
 #####################################
 
-auto_boundsPlot <- dplyr::filter(droplevels(comp_df), file==detect_sel_file) #%>% droplevels(auto_boundsPlot)
+auto_boundsPlot <- dplyr::filter(droplevels(comp_df), file==detect_sel_file) 
 #
 # plot derivatives to adjust automatic detector
 singleBounds <- ggplot(auto_boundsPlot, aes(x=t)) +
@@ -299,7 +299,7 @@ CoM <- function(df) {
 # CoG uses the interpolated F0 multiplied by the corresponding periodic energy fraction (0--1)
 CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
-  f0Floor <- min(df$f0_interp_stretch_smooth, na.rm=T) - .2 * df$f0_token_range 
+  f0Floor <- min(df$f0_interp_stretch_smooth, na.rm=T) - .1 * df$f0_speaker_range 
   ifelse(
     sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
     round(sum((df$f0_interp_stretch_smooth - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_interp_stretch_smooth - f0Floor) * df$smogPP_20Hz, na.rm=T)))
@@ -390,7 +390,7 @@ comp_df <- mutate(
   ############ speech-rate ############
   #####################################
   ## 'CoM': stretch observations
-  CoM_seq = na.locf(CoM_corr, na.rm=F),  # CoM_seq = na.locf(CoM, na.rm=F),
+  CoM_seq = na.locf(CoM_corr, na.rm=F),  
   ## 'CoM: calculate consecutive CoM diffs
   CoM_diff = ifelse(
     !is.na(CoM_corr), CoM_corr - lag(CoM_seq, 2), NA),
@@ -443,15 +443,13 @@ sel_file <- f
 single_token <- dplyr::filter(comp_df, file==sel_file)
 
 plotUnits <- round(single_token$f0_token_range[1]/30)
-# if(useManual==TRUE)
+
 maxBounds <- ifelse(manual==TRUE, 
                     max(single_token$auto_bounds,single_token$syll_bounds,na.rm = T), 
                     max(single_token$auto_bounds,na.rm = T))
-# maxBounds <- max(single_token$auto_bounds,single_token$syll_bounds,na.rm = T)
 minBounds <- ifelse(manual==TRUE,
                     min(single_token$auto_bounds,single_token$syll_bounds,na.rm = T),
                     min(single_token$auto_bounds,na.rm = T))
-# minBounds <- min(single_token$auto_bounds,single_token$syll_bounds,na.rm = T)
 midLow <- round(single_token$f0_token_min[1]-single_token$f0_token_range[1]/2)
 midHigh <- round(single_token$f0_token_max[1]-single_token$f0_token_range[1]/2)
 
@@ -515,12 +513,11 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pd
 })
 ##################################
 
-
 ```
 
 ```{r minimize_comp_df}
 
-mini_comp_df <- comp_df[c("file", "t", "speaker", 
+mini_comp_df <- droplevels(comp_df[c("file", "t", "speaker", 
                           if(manual==TRUE) "syll_mid", 
                           if(manual==TRUE) "syll_bounds", 
                           if(manual==TRUE) "syll_label", 
@@ -531,9 +528,9 @@ mini_comp_df <- comp_df[c("file", "t", "speaker",
                           if(useManual==TRUE) "syll_boundsSeq", 
                           "auto_bounds", "DeltaF0", 
                           if(useManual==TRUE) "auto_boundsSeq", 
-                          "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "PERatCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "CoM_seq", "localSpeechRate")]
+                          "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "localSpeechRate")])
 
-mini_comp_df <- droplevels(mini_comp_df)
+# mini_comp_df <- droplevels(mini_comp_df)
 
 ```
 
