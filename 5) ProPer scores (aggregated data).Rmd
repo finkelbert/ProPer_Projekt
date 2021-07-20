@@ -1,0 +1,41 @@
+# ProPer scores (V): word prominence
+
+```{r clean_start}
+rm(list = ls())
+
+## Load required libraries 
+require(dplyr)
+require(zoo)
+
+comp_df <- read.csv("data_tables/comp_df.csv") %>% distinct(file, t, .keep_all = TRUE)
+
+if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
+  group_by(comp_df, file),
+  syll_mid = na.locf(syll_mid, na.rm=F),
+  syll_label = na.locf(syll_label, na.rm=F),
+  word_label = na.locf(word_label, na.rm=F)
+  )
+
+# check up on correct allocations?
+# comp_df <- mutate(
+  # group_by(comp_df, file, syll_mid),
+  # (check how many CoMs within manually segmented interval and choose the one associated with highest mass if there are multiple CoMs)???
+
+```
+
+```{r prepare_scores_df, warning=FALSE}
+
+scores_df <- droplevels(comp_df[c("file", "t", "speaker", 
+                       "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
+                       "syll_boundsSeq", "auto_boundsSeq", "syll_mid", "syll_label", "word_label",
+                       "intervalDuration", "intervalDuration_rel", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
+
+
+scores_df <- dplyr::filter(scores_df, syll_mid==t)
+
+```
+
+```{r write_scores_df}
+## Write the computation data file
+write.csv(scores_df, "data_tables/scores_df.csv", row.names=FALSE)
+```
