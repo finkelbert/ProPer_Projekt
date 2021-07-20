@@ -62,7 +62,6 @@ comp_df <- mutate(
 nop <- function(x) x
 files <- comp_df$file
 files <- files[!duplicated(files)==TRUE]
-# run_singles <- plyr::ldply(files, function(f) {
 plyr::ldply(files, function(f) {
 sel_file <- f
 single_token <- dplyr::filter(comp_df, file==sel_file)
@@ -92,14 +91,12 @@ if(useManual==TRUE) mkBoundetect <- function(single_token) {
     andCond( ssscmp(0.05) ) %>%
     condMap( ssscmpf(lag),  Lags, andCond ) %>%
     condMap( ssscmpf(lead), Lags, andCond ) %>%
-## comment out below this line if there's no manual segmetation:
     andCond(
       ## determine left distance (in ms) from manual boundaries
       single_token$t < single_token$syll_boundsSeq +autoMan |
       ## determine right distance (in ms) from manual boundaries
       single_token$t < lead(single_token$syll_boundsSeq, autoMan)
     ) %>%
-## comment out up to this line if there's no manual segmetation:
     which()
 }
 #
