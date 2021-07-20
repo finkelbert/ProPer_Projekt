@@ -1,4 +1,4 @@
-# ProPer scores (V): word prominence
+# ProPer scores (V): allocate ProPer values to manually segmented intervals, for data aggregation and stats
 
 ```{r clean_start}
 rm(list = ls())
@@ -9,6 +9,7 @@ require(zoo)
 
 comp_df <- read.csv("data_tables/comp_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 
+## interpolate observations
 if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
   group_by(comp_df, file),
   syll_mid = na.locf(syll_mid, na.rm=F),
@@ -25,17 +26,18 @@ if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
 
 ```{r prepare_scores_df, warning=FALSE}
 
+## reduce columns
 scores_df <- droplevels(comp_df[c("file", "t", "speaker", 
                        "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
                        "syll_boundsSeq", "auto_boundsSeq", "syll_mid", "syll_label", "word_label",
                        "intervalDuration", "intervalDuration_rel", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
 
-
+## reduce rows
 scores_df <- dplyr::filter(scores_df, syll_mid==t)
 
 ```
 
 ```{r write_scores_df}
-## Write the computation data file
+## Write the scores data file
 write.csv(scores_df, "data_tables/scores_df.csv", row.names=FALSE)
 ```
