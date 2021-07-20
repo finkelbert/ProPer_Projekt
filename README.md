@@ -90,7 +90,14 @@ The codes in `4) ProPer analyses (Synchrony etc.).Rmd` are designed to extract P
 
 The automatic boundary detector is designed to locate local minima in the periodic energy curve while also taking into account information from the optional "Syllable" tier in a corresponding TextGrid. Manual segmentation can guide the automatic detector and help in targeting specific syllables of interest and is therefore highly recommended for ProPer analyses.
 
-You can adjust the variable *autoMan* to determine the amount of permitted distance between automatically located boundaries (auto_bounds) and the manual segmentation from Praat's TextGrid (syll_bounds). The default, 40, means that: (i) when searching automatic boundaries, only points that are not more than 40 ms before OR after a manual boundary are permitted; (ii) if after the automatic procedure there are manual boundaries that have no automatic boundary set both 40 ms before AND after them, a boundary will be added there.
+The first part of `ProPer analyses (Synchrony etc.)` presents adjustable presets that summarize the important variables for the boundary detection algorithm:
+
++ **autoMan**: Determine the amount of permitted distance between automatically located boundaries (*auto_bounds*) and the manual segmentation from Praat's TextGrid (*syll_bounds*). The default, 40, means that: (i) when searching automatic boundaries, only points that are not more than 40 ms before OR after a manual boundary are permitted; (ii) if after the automatic procedure there are manual boundaries that have no automatic boundary set both 40 ms before AND after them, a boundary will be added there. Lower values are therefore more restrictive. Change *autoMan* to 0 ms if you wish to force manual segmentation on automatic boundaries. 
+
++ **useManual**: Determine whether to consider manual segmentations in the automatic boundary detection algorithm, provided they exist (choose the default, [1]). To prevent the algorithm from considering manual segmetations, regardless of whether they appear in the data, choose [2]. 
+
++ **averageSyll**: Determine the expected boundary number by average syllable size when the algorithm cannot consider manual segmentations (i.e. when *useManual* = FALSE). Choose an average syllable size (in ms). A good starting point should be around  175 ms.
+
 
 **The following is a brief description of the calculations we perform**:
 
