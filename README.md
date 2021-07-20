@@ -6,7 +6,7 @@ Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice
 ---
 
 ## Instructions for the ProPer workflow
-(last update: 19 July 2021)
+(last update: 20 July 2021)
 
 ### 0. Before you begin
 
@@ -107,6 +107,11 @@ The first part of `ProPer analyses (Synchrony etc.)` presents adjustable presets
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables (rising/falling/level).
 + **∆F0/DeltaF0**: We measure F0 within each interval at the center of mass of periodic energy (CoM), and we compute *∆F0*/*DeltaF0* in terms of the difference in F0 from previous interval to reflect the F0 shape across syllables. For the first interval we compute the difference from the speaker's median F0.
 + **Speech-rate**: We calculate the temporal distance between consecutive CoMs to yield a local speech-rate curve. For the first interval we compute the relative duration compared to the maximal interval duration in the same speech item.
+
+### 5) ProPer scores: aggregated data
+##### Allocate ProPer values to manually segmented intervals, for data aggregation and stats (create `scores_df.csv`)
+
+The 5th script suggests a method to allocate ProPer values to selected syllables. This is useful in order to aggregate data that can be comparable via descriptive and inferential statistical analyses.
 
 ***
 
