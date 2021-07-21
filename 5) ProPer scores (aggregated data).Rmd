@@ -28,9 +28,10 @@ if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
 
 ## reduce columns
 scores_df <- droplevels(comp_df[c("file", "t", "speaker", 
+                       "perFloorStatus", "relToStatus", "strengThreshStatus", "useManualStatus", "autoManStatus", "averageSyllStatus",
                        "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
                        "syll_boundsSeq", "auto_boundsSeq", "syll_mid", "syll_label", "word_label",
-                       "intervalDuration", "intervalDuration_rel", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
+                       "intervalDuration", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
 
 ## reduce rows
 scores_df <- dplyr::filter(scores_df, syll_mid==t)

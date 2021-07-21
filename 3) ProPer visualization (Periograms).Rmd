@@ -43,6 +43,11 @@ strengThresh <- 0.25 # {0 -- .5}
 ## find values for entire data set
 main_df <- mutate(
   group_by(main_df),
+## keep records of adjustable variables
+  perFloorStatus = perFloor, 
+  relToStatus = relTo,
+  strengThreshStatus = strengThresh,
+## find values for entire data set
   max_data_per_power = max(periodic_power, na.rm=T),
   max_data_strength = max(strength_rowmax, na.rm=T),
   f0_data_min = min(f0_smooth, na.rm=T),
@@ -71,7 +76,7 @@ main_df <- mutate(
   # variables for plot normalization
   plotFloor = round(f0_token_min - f0_token_range, 2),
   ## conclude relative anchors and thresholds
-  perFloorFix = perFloor, # keep records for potential fix
+  perFloorStatus = perFloor, # keep records for potential fix
   perFloor_indeed = ifelse(
     relTo=="token", round(max_token_per_power * perFloor, 10), ifelse(
       relTo=="data", round(max_data_per_power * perFloor, 10), 
@@ -203,25 +208,28 @@ ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_PERIOGRAM(1).pdf"),dev
 
 ```{r readjust_singles, warning=FALSE, echo=FALSE}
 
+files <- main_df$file
+files <- files[!duplicated(files)==TRUE]
+
 ## change the perFloor of specific tokens
 main_df <- mutate(
   group_by(main_df, file),
   #
-  perFloorFix = ifelse(
+  perFloorStatus = ifelse(
     file == files[1],    # choose token to change
     0.004,                # set the new perFloor value
-    perFloorFix),
+    perFloorStatus),
   #                      # repeat previous 4 lines for each unique perFloor value if necessary
-  perFloorFix = ifelse(
+  perFloorStatus = ifelse(
     file == files[3],    
     0.04,                
-    perFloorFix),
+    perFloorStatus),
   #                      
   #### re-run 
   perFloor_indeed = ifelse(
-    relTo=="token", round(max_token_per_power * perFloorFix, 10), ifelse(
-      relTo=="data", round(max_data_per_power * perFloorFix, 10), 
-      round(max_speaker_per_power * perFloorFix, 10))),
+    relTo=="token", round(max_token_per_power * perFloorStatus, 10), ifelse(
+      relTo=="data", round(max_data_per_power * perFloorStatus, 10), 
+      round(max_speaker_per_power * perFloorStatus, 10))),
   ## log periodic power
   logPP = 10*log10(postPP/perFloor_indeed),
   logPP = ifelse(logPP<0 | is.na(logPP), 0, logPP),
@@ -307,16 +315,15 @@ After reviewing the data and adjusting theresholds, write the main data file for
 
 ```{r minimize_main_df}
 
-mini_main_df <- main_df[c("file","t","speaker",
+mini_main_df <- droplevels(main_df[c("file","t","speaker",
+                          "perFloorStatus", "relToStatus", "strengThreshStatus",
                           if(length(which(!is.na(main_df$syll_mid))) > 0) "syll_mid",
                           if(length(which(!is.na(main_df$syll_bounds))) > 0) "syll_bounds",
                           if(length(which(!is.na(main_df$syll_label))) > 0) "syll_label",
                           if(length(which(!is.na(main_df$word_mid))) > 0) "word_mid",
                           if(length(which(!is.na(main_df$word_bounds))) > 0) "word_bounds",
                           if(length(which(!is.na(main_df$word_label))) > 0) "word_label",
-                          "f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_token_min","f0_token_max","f0_token_median","f0_token_mean","f0_token_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")]
-
-mini_main_df <- droplevels(mini_main_df)
+                          "f0_speaker_min","f0_speaker_max","f0_speaker_median","f0_speaker_mean","f0_speaker_range","f0_token_min","f0_token_max","f0_token_median","f0_token_mean","f0_token_range","plotFloor","intensityRel","postPP_rel","logPP_rel","smogPP_20Hz","smogPP_12Hz","smogPP_8Hz","smogPP_5Hz","f0_interp_stretch_smooth","f0_interp_smooth")])
 
 ```
 

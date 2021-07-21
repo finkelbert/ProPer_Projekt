@@ -49,9 +49,16 @@ if(useManual==TRUE) comp_df <- mutate(
   )
 #
 comp_df <- mutate(
-  group_by(comp_df, file),
+  group_by(comp_df),
+  # keep records of adjustable variables
+  useManualStatus = useManual,
+  autoManStatus = autoMan,
+  averageSyllStatus = averageSyll,
+  # prepare empty columns
   auto_bounds = NA,
-  DeltaF0 = NA,
+  DeltaF0 = NA)
+comp_df <- mutate(
+  group_by(comp_df, file),
 ## compute and smooth 1st and 2nd derivatives of the periodic energy curve
   smogPP_1stDer = ifelse(t==0, 0, (smogPP_20Hz - lag(smogPP_20Hz,1))*1000),
   smogPP_1stDer = bwfilter(wave = smogPP_1stDer, f = 1000, to = 40, n = 2),
@@ -517,6 +524,7 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_plotComp.pdf"),device=cairo_pd
 ```{r minimize_comp_df}
 
 mini_comp_df <- droplevels(comp_df[c("file", "t", "speaker", 
+                          "perFloorStatus", "relToStatus", "strengThreshStatus", "useManualStatus", "autoManStatus", "averageSyllStatus",
                           if(manual==TRUE) "syll_mid", 
                           if(manual==TRUE) "syll_bounds", 
                           if(manual==TRUE) "syll_label", 
@@ -526,7 +534,7 @@ mini_comp_df <- droplevels(comp_df[c("file", "t", "speaker",
                           "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_token_min", "f0_token_max", "f0_token_median", "f0_token_mean", "f0_token_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", 
                           if(useManual==TRUE) "syll_boundsSeq", 
                           "auto_bounds", "auto_boundsSeq", 
-                          "intervalDuration", "intervalDuration_rel", "CoM", "CoG", "CoM_corr", "CoG_corr", "f0atCoM", "f0atCoG", "PERatCoM", "PERatCoG", "DeltaF0", "DeltaF0_rel", "synchrony", "sync_rel", "mass", "mass_rel", "DeltaF0Label", "syncLabel", "localSpeechRate")])
+                          "intervalDuration", "CoM", "CoG", "CoM_corr", "CoG_corr", "f0atCoM", "f0atCoG", "PERatCoM", "PERatCoG", "DeltaF0", "DeltaF0_rel", "synchrony", "sync_rel", "mass", "mass_rel", "DeltaF0Label", "syncLabel", "localSpeechRate")])
 
 ```
 
