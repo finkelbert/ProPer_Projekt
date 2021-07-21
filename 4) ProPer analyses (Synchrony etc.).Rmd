@@ -44,8 +44,8 @@ averageSyll <- 175 # {75 -- 250}
 ## pre-loop
 if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
-  syll_boundsSeq = na.locf(syll_bounds, na.rm=F)#,
-  # syll_boundsSeq = ifelse(is.na(syll_boundsSeq), 0, syll_boundsSeq)
+  syll_boundsSeq = na.locf(syll_bounds, na.rm=F),
+  syll_boundsSeq = ifelse(is.na(syll_boundsSeq), 0, syll_boundsSeq)
   )
 #
 comp_df <- mutate(
@@ -166,14 +166,14 @@ if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
   # stretch auto_bounds observtions to locate missing auto_bounds
   auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
-  # auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
+  auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
   # locate missing auto_bounds (where a syll_bound exists)
   auto_bounds = ifelse(
     (!is.na(syll_bounds) & syll_bounds > auto_boundsSeq +autoMan & syll_bounds > lead(auto_boundsSeq, autoMan)),
     syll_bounds, auto_bounds),
   # re-stretch the auto_bounds observtions after change
-  auto_boundsSeq = na.locf(auto_bounds, na.rm=F)#,
-  # auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq)
+  auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
+  auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq)
   )
 #
 ## re-create the boundaries list
@@ -523,11 +523,8 @@ mini_comp_df <- droplevels(comp_df[c("file", "t", "speaker",
                           if(length(comp_df$word_bounds) > 0) "word_label", 
                           "f0_speaker_min", "f0_speaker_max", "f0_speaker_median", "f0_speaker_mean", "f0_speaker_range", "f0_token_min", "f0_token_max", "f0_token_median", "f0_token_mean", "f0_token_range", "smogPP_20Hz", "smogPP_12Hz", "smogPP_8Hz", "smogPP_5Hz", "f0_interp_stretch_smooth", "f0_interp_smooth", 
                           if(useManual==TRUE) "syll_boundsSeq", 
-                          "auto_bounds", "DeltaF0", 
-                          if(useManual==TRUE) "auto_boundsSeq", 
-                          "mass", "intervalDuration", "CoM", "CoG", "f0atCoM", "f0atCoG", "PERatCoM", "PERatCoG", "synchrony", "CoM_corr", "CoG_corr", "DeltaF0_rel", "sync_rel", "mass_rel", "intervalDuration_rel", "DeltaF0Label", "syncLabel", "localSpeechRate")])
-
-# mini_comp_df <- droplevels(mini_comp_df)
+                          "auto_bounds", "auto_boundsSeq", 
+                          "intervalDuration", "intervalDuration_rel", "CoM", "CoG", "CoM_corr", "CoG_corr", "f0atCoM", "f0atCoG", "PERatCoM", "PERatCoG", "DeltaF0", "DeltaF0_rel", "synchrony", "sync_rel", "mass", "mass_rel", "DeltaF0Label", "syncLabel", "localSpeechRate")])
 
 ```
 
