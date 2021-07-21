@@ -169,7 +169,9 @@ if(useManual==TRUE) comp_df <- mutate(
   auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
   # locate missing auto_bounds (where a syll_bound exists)
   auto_bounds = ifelse(
-    (!is.na(syll_bounds) & syll_bounds > auto_boundsSeq +autoMan & syll_bounds > lead(auto_boundsSeq, autoMan)),
+    (!is.na(syll_bounds) & 
+       (syll_bounds > auto_boundsSeq +autoMan | syll_bounds -autoMan < 0) & 
+       (syll_bounds > lead(auto_boundsSeq, autoMan) | syll_bounds +autoMan > max(t))),
     syll_bounds, auto_bounds),
   # re-stretch the auto_bounds observtions after change
   auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
