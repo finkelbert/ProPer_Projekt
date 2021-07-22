@@ -9,29 +9,70 @@ require(zoo)
 
 comp_df <- read.csv("data_tables/comp_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 
-## interpolate observations
+## interpolate observations from the TextGrid manual annotations
 if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
   group_by(comp_df, file),
   syll_mid = na.locf(syll_mid, na.rm=F),
-  syll_label = na.locf(syll_label, na.rm=F),
-  word_label = na.locf(word_label, na.rm=F)
+  syll_label = na.locf(syll_label, na.rm=F)
   )
 
-# check up on correct allocations?
-# comp_df <- mutate(
-  # group_by(comp_df, file, syll_mid),
-  # (check how many CoMs within manually segmented interval and choose the one associated with highest mass if there are multiple CoMs)???
+if(length(comp_df$word_label) > 0) comp_df <- mutate(
+  group_by(comp_df, file),
+  word_label = na.locf(word_label, na.rm=F)
+  )
 
 ```
 
 ```{r prepare_scores_df, warning=FALSE}
 
+## check up on correct allocations: check how many CoMs within manually segmented intervals and choose the one associated with highest mass if there are multiple CoMs
+comp_df <- mutate(
+  group_by(comp_df, file),
+  ## put CoM values in their time's row
+  CoMatCoM = ifelse(CoM == t , CoM, NA)
+  )
+comp_df <- mutate(
+  ## calcualte the following for each syllabic interval (manual)
+  group_by(comp_df, file, syll_mid),
+  ## find the CoMs associated with each syllabic interval
+  syllCoMMap = ifelse( (all(is.na(CoMatCoM)) | is.na(syll_mid)) , NA,
+                            ifelse( length(which(!is.na(CoMatCoM))) == 1, mean(CoMatCoM, na.rm = T),
+                                    # show the stonger mass_rel if there are multiple CoMs
+                                    ifelse( length(which(!is.na(CoMatCoM))) > 1, max(mass_rel, na.rm = T), NA ))),
+  ## convert mass_rel to corresponding CoM
+  syllCoMflicts = ifelse( (length(which(!is.na(CoMatCoM))) > 1 & syllCoMMap != mass_rel) , NA, CoM ),
+  ## strectch the relevant CoM values within syllabic intervals
+  syllCoMMap = ifelse( length(which(!is.na(CoMatCoM))) > 1, mean(syllCoMflicts, na.rm = T), syllCoMMap ),
+  ### the following ProPer parameters: use the values associated with the relevant CoM
+  intervalDuration = ifelse( syllCoMMap == t, intervalDuration, NA),
+  intervalDuration = ifelse( all(is.na(intervalDuration)), NA, max(intervalDuration, na.rm = T) ),
+  CoM = ifelse( syllCoMMap == t, CoM, NA),
+  CoM = ifelse( all(is.na(CoM)), NA, max(CoM, na.rm = T) ),
+  CoG = ifelse( syllCoMMap == t, CoG, NA),
+  CoG = ifelse( all(is.na(CoG)), NA, max(CoG, na.rm = T) ),
+  f0atCoM = ifelse( syllCoMMap == t, f0atCoM, NA),
+  f0atCoM = ifelse( all(is.na(f0atCoM)), NA, max(f0atCoM, na.rm = T) ),
+  DeltaF0 = ifelse( syllCoMMap == t, DeltaF0, NA),
+  DeltaF0 = ifelse( all(is.na(DeltaF0)), NA, max(DeltaF0, na.rm = T) ),
+  DeltaF0_rel = ifelse( syllCoMMap == t, DeltaF0_rel, NA),
+  DeltaF0_rel = ifelse( all(is.na(DeltaF0_rel)), NA, max(DeltaF0_rel, na.rm = T) ),
+  synchrony = ifelse( syllCoMMap == t, synchrony, NA),
+  synchrony = ifelse( all(is.na(synchrony)), NA, max(synchrony, na.rm = T) ),
+  sync_rel = ifelse( syllCoMMap == t, sync_rel, NA),
+  sync_rel = ifelse( all(is.na(sync_rel)), NA, max(sync_rel, na.rm = T) ),
+  mass_rel = ifelse( syllCoMMap == t, mass_rel, NA),
+  mass_rel = ifelse( all(is.na(mass_rel)), NA, max(mass_rel, na.rm = T) )
+  )
+
 ## reduce columns
 scores_df <- droplevels(comp_df[c("file", "t", "speaker", 
-                       "perFloorStatus", "relToStatus", "strengThreshStatus", "useManualStatus", "autoManStatus", "averageSyllStatus",
-                       "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
-                       "syll_boundsSeq", "auto_boundsSeq", "syll_mid", "syll_label", "word_label",
+                                  "perFloorStatus", "relToStatus", "strengThreshStatus", "useManualStatus", "autoManStatus", "averageSyllStatus",
+                                  "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
+                       if(length(comp_df$syll_mid) > 0) "syll_mid", "syll_label", "syll_boundsSeq", 
+                       "auto_boundsSeq", 
+                       if(length(comp_df$word_label) > 0) "word_label",
                        "intervalDuration", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
+
 
 ## reduce rows
 scores_df <- dplyr::filter(scores_df, syll_mid==t)
