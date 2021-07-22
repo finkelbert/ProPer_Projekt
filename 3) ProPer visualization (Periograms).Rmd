@@ -185,9 +185,9 @@ periogram_single1 <-
   geom_line(aes(y=smogPP_5Hz*f0_token_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=single_token1$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  {if(length(single_token1$syll_bounds)>0) geom_vline(aes(xintercept=single_token1$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5)} +
 ## annotations
-  geom_text(aes(x=single_token1$syll_mid, y=f0_token_max+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
+  {if(length(single_token1$syll_mid)>0) geom_text(aes(x=single_token1$syll_mid, y=f0_token_max+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica")} + 
 ## plot stuff
   ggtitle(paste0(sel_file1)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
@@ -291,9 +291,9 @@ periogram_single2 <-
   geom_line(aes(y=smogPP_5Hz*f0_token_range+plotFloor),color="rosybrown1", alpha=.3, size=2) +
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  geom_vline(aes(xintercept=single_token2$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5) +
+  {if(length(single_token2$syll_bounds)>0) geom_vline(aes(xintercept=single_token2$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5)} +
 ## annotations
-  geom_text(aes(x=single_token2$syll_mid, y=f0_token_max+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica") + 
+  {if(length(single_token2$syll_mid)>0) geom_text(aes(x=single_token2$syll_mid, y=f0_token_max+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica")} + 
 ## plot stuff
   ggtitle(paste0(sel_file2)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
