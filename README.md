@@ -6,7 +6,7 @@ Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice
 ---
 
 ## Instructions for the ProPer workflow
-(last update: 20 July 2021)
+(last update: 22 July 2021)
 
 ### 0. Before you begin
 
@@ -112,6 +112,8 @@ The first part of `ProPer analyses (Synchrony etc.)` presents adjustable presets
 ##### Allocate ProPer values to manually segmented intervals, for data aggregation and stats (create `scores_df.csv`)
 
 The 5th script suggests a method to allocate ProPer values to selected syllables. This is useful in order to aggregate data that can be comparable via descriptive and inferential statistical analyses.
+
+The current version extracts ProPer values (e.g. Synchrony, ∆F0 etc.) that are associated with the periodic energy mass that has its center (CoM) within an interval of interest (the manually segmented TextGrid intervals). In the cases when there are multiple CoM in a single interval, the values of the strongest mass are chosen.
 
 ***
 
