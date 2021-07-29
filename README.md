@@ -15,7 +15,7 @@ This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https:
 
 **File names**  
 
-* File names should not include special characters (e.g. IPA or diacritics), as well as spaces or dots. It is recommended to use an uderscore to separate filename elements (e.g. *interrogative_speaker1_sentence1.wav*).
+* File names should not include special characters (e.g. IPA or diacritics), as well as spaces or dots. It is recommended to use an underscore to separate file name elements (e.g. *interrogative_speaker1_sentence1.wav*).
 
 **Audio**  
 
@@ -23,7 +23,7 @@ This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https:
   
 * Regardless of whichever sample-rate is being used, make sure that the sample-rate is identical in all your audio files (and remember that sample-rate conversion is a one-way street: upsampling cannot improve sound quality).
 
-* It is recommended to normalize the loudness of all audio files to the same target BEFORE the Praat analysis takes place. This could be a simple average target (e.g. *RMS*) or a more advanced Loudness Unit target (*LU*). In both cases the recommeded value is -23 given dBFS for an RMS-based target or LUFS for the LU target (FS = full scale, where '0' is the maximal posiible value). Freely available loudness normalization can be done with [Audacity](https://www.audacityteam.org/) where it is also possible to batch process many files via *macros*. Note that the LUFS normaliztion in Audacity is found under *Effect -> Loudness Normalization -> perceived loudness*. It should be set to -23LUFS, and you should deselect "Treat mono as dual-mono" since this will actually result in a -26LUFS. That said, whatever value you choose, the important thing is to keep a consistent target value for the entire data set.
+* It is recommended to normalize the loudness of all audio files to the same target BEFORE the Praat analysis takes place. This could be a simple average target (e.g. *RMS*) or a more advanced Loudness Unit target (*LU*). In both cases the recommended value is -23 given dBFS for an RMS-based target or LUFS for the LU target (FS = full scale, where '0' is the maximal possible value). Freely available loudness normalization can be done with [Audacity](https://www.audacityteam.org/) where it is also possible to batch process many files via *macros*. Note that the LUFS normalization in Audacity is found under *Effect -> Loudness Normalization -> perceived loudness*. It should be set to -23LUFS, and you should deselect "Treat mono as dual-mono" since this will actually result in a -26LUFS. That said, whatever value you choose, the important thing is to keep a consistent target value for the entire data set.
 
 * Audio files should have at least 200 ms without a signal (i.e. without acoustic material that needs to be analyzed) on both ends, initial and final, due to limitations in Praat's analysis at file edges. If this distance is not available on file, it is possible to insert additional silence to the audio file (see, e.g., [here](http://www.ddaidone.com/uploads/1/0/5/2/105292729/insert_silence_at_start_of_all_files_in_folder.txt) and [here](http://www.ddaidone.com/uploads/1/0/5/2/105292729/insert_silence_at_end_of_all_files_in_folder.txt)). See also next point about TextGrids in case you added silent portions to the audio AFTER the TextGrids were created.
 
@@ -34,7 +34,7 @@ This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https:
 `Extend time: 0.2, "Start"`  
 `Shift times by: 0.2`
 
-* For most dsirable interface with the R codes, it is highly recommended to manually segment syllable-sized intervals in the TextGrid. The automatic detection of major periodic energy fluctuations in ProPer can make use of manual syllabic segmentation for optimal results.
+* For most desirable interface with the R codes, it is highly recommended to manually segment syllable-sized intervals in the TextGrid. The automatic detection of major periodic energy fluctuations in ProPer can make use of manual syllabic segmentation for optimal results.
   
 * Avoid special characters (e.g. IPA or diacritics) in the TextGrid tiers. 
   
@@ -42,16 +42,16 @@ This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https:
 
 **Managing R code**  
 
-* If you have [*RStudio*](https://www.rstudio.com/), it is recommended to open the R Project file, `ProPer_Projekt.Rproj`, to use the different R Markdown files and manange the entire working directory from one central interface. Otherwise, simply use the individual R Markdown files (ending with *.Rmd*) directly.
+* If you have [*RStudio*](https://www.rstudio.com/), it is recommended to open the R Project file, `ProPer_Projekt.Rproj`, to use the different R Markdown files and manage the entire working directory from one central interface. Otherwise, simply use the individual R Markdown files (ending with *.Rmd*) directly.
 
 ---
 
 ### 1. ProPer pre-preparation: Acoustics-to-Praat
 ##### Data extraction from Praat (Praat script)
 
-Copy the Praat script from `1) ProPer pre-preparation (Acoustics-to-Praat).praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (see notes on audio compatability issues above).
+Copy the Praat script from `1) ProPer pre-preparation (Acoustics-to-Praat).praat` into a Praat script window (or double-click the file to open directly in a Praat script window). Make sure that the directory paths are correct (change 'xxx' directly in the script or in the prompted Praat form), and make sure that your audio file(s) are/is in the "audio" directory (see notes on audio compatibility issues above).
 
-We use the *Pitch object* in Praat to extract the *periodic fraction* of the signal from the *strength* values that are associated with each pitch candidate. The strength scale in the pitch object (running from 0 to 1) reflects the extenet to which the acoustic signal is similar to itself across selected time points in the auto-correlation function. This similarity characterizes periodic signals, but it is not informative about the power of the signal. We need to multiply the periodic fraction by the *total power*, which we derive from the intensity tier to calculate the *periodic power*.
+We use the *Pitch object* in Praat to extract the *periodic fraction* of the signal from the *strength* values that are associated with each pitch candidate. The strength scale in the pitch object (running from 0 to 1) reflects the extent to which the acoustic signal is similar to itself across selected time points in the auto-correlation function. This similarity characterizes periodic signals, but it is not informative about the power of the signal. We need to multiply the periodic fraction by the *total power*, which we derive from the intensity tier to calculate the *periodic power*.
 
 The Praat script is based on *mausmooth* (Cangemi & Albert 2016), prompting a grouped view of the audio and pitch objects of each item in the list, allowing the user to correct pitch candidates in the pitch object (e.g. fix octave jumps) before the pitch object and the smoothed pitch tier are saved. This behavior can be switched off in the form by deselecting "inspect" (the pitch objects and tiers will be automatically created and saved). 
 
@@ -67,7 +67,7 @@ Note that these codes allow for optional data from Praat's TextGrids that the us
 ### 3) ProPer visualization: Periograms
 ##### Prepare the main data table (create `main_df.csv`)
 
-The codes in `3) ProPer visualization (Periograms).Rmd` are designed to calculate and shape the *periodic energy* curve from the *periodic power* vector after the application of log-transform and smoothing functions. This is enough to achieve the first goal: rich 3-dimensional visualization of pitch contours, a.k.a. ***Periograms***. Periograms show the F0 trajectory whereby time is on the x-axis and frequency is on the y-axis---as in most common practices---while also reflecting the stregnth of the perceived pitch contour continuously in terms of the thickness and darkness of the F0 curve (see Albert et al. 2018, 2019).
+The codes in `3) ProPer visualization (Periograms).Rmd` are designed to calculate and shape the *periodic energy* curve from the *periodic power* vector after the application of log-transform and smoothing functions. This is enough to achieve the first goal: rich 3-dimensional visualization of pitch contours, a.k.a. ***Periograms***. Periograms show the F0 trajectory whereby time is on the x-axis and frequency is on the y-axis---as in most common practices---while also reflecting the strength of the perceived pitch contour continuously in terms of the thickness and darkness of the F0 curve (see Albert et al. 2018, 2019).
 
 The first part of `ProPer visualization (Periograms)` presents adjustable presets that summarize the important variables for the periodic energy adjustment phase:
 
@@ -79,7 +79,7 @@ The first part of `ProPer visualization (Periograms)` presents adjustable preset
 
 Note that we create 4 flavors of smoothing for the periodic energy curve. We use low-pass filters of 20Hz, 12Hz, 8Hz and 5Hz to achieve smoothing in intervals of 50, 83, 125 and 200 ms sizes (respectively). The 20Hz smoothing is targeting segmental-size intervals (as short as 50 ms), while the 5Hz smoothing is targeting syllable-size intervals (at 200 ms). We provide 2 more smoothing stages in between those two ends of the spectrum with 8Hz and 12Hz low-pass filters.[^smoothing] 
 
-[^smoothing]: The code in this script also interpolates and smooths the F0 contour from Praat's pitch tier. We smooth the final F0 contours with a 6Hz low-pass filter (166.7 ms intervals), to retain the affinity to syllable-size intervals and given that 6Hz is closest to naturally occuring vibrato in singing voices (Cook 2001).
+[^smoothing]: The code in this script also interpolates and smooths the F0 contour from Praat's pitch tier. We smooth the final F0 contours with a 6Hz low-pass filter (166.7 ms intervals), to retain the affinity to syllable-size intervals and given that 6Hz is closest to naturally occurring vibrato in singing voices (Cook 2001).
 
 Use the plots in the code chunks to inspect the data and adjust the thresholds before saving the *main_df* data frame as a .csv table.
 
@@ -113,7 +113,7 @@ The first part of `ProPer analyses (Synchrony etc.)` presents adjustable presets
 
 The 5th script suggests a method to allocate ProPer values to selected syllables. This is useful in order to aggregate data that can be comparable via descriptive and inferential statistical analyses.
 
-The current version extracts ProPer values (e.g. Synchrony, ∆F0 etc.) that are associated with the periodic energy mass that has its center (CoM) within an interval of interest (the manually segmented TextGrid intervals). In the cases when there are multiple CoM in a single interval, the values of the strongest mass are chosen.
+The current version extracts ProPer values (e.g. Synchrony, ∆F0 etc.) that are associated with the periodic energy mass that has its center (CoM) within an interval of interest (the manually segmented TextGrid intervals). In the cases when there are multiple CoMs in a single interval, the values of the strongest mass are chosen.
 
 ***
 
