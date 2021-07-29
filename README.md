@@ -10,7 +10,7 @@ Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice
 
 ### 0. Before you begin
 
-This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https://www.r-project.org/) ([RStudio](https://www.rstudio.com/) is recomended).  
+This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/) and [R](https://www.r-project.org/) ([RStudio](https://www.rstudio.com/) is recommended).  
 
 
 **File names**  
