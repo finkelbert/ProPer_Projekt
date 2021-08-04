@@ -37,8 +37,13 @@ comp_df <- mutate(
   ## find the CoMs associated with each syllabic interval
   syllCoMMap = ifelse( (all(is.na(CoMatCoM)) | is.na(syll_mid)) , NA,
                             ifelse( length(which(!is.na(CoMatCoM))) == 1, mean(CoMatCoM, na.rm = T),
-                                    # show the stonger mass_rel if there are multiple CoMs
-                                    ifelse( length(which(!is.na(CoMatCoM))) > 1, max(mass_rel, na.rm = T), NA ))),
+                                    # use '0' when there are multiple CoMs
+                                    ifelse( length(which(!is.na(CoMatCoM))) > 1, 0 ))),
+  # choose the stonger mass_rel if there are multiple CoMs
+  syllCoMMap2 = ifelse(syllCoMMap==0 & CoMatCoM==t, mass_rel, NA),
+  syllCoMMap2 = max(syllCoMMap2, na.rm = T),
+  syllCoMMap = ifelse(syllCoMMap==0 & CoMatCoM==t, syllCoMMap2, syllCoMMap),
+  syllCoMMap = ifelse(syllCoMMap==0, NA, syllCoMMap),
   ## convert mass_rel to corresponding CoM
   syllCoMflicts = ifelse( (length(which(!is.na(CoMatCoM))) > 1 & syllCoMMap != mass_rel) , NA, CoM ),
   ## strectch the relevant CoM values within syllabic intervals
