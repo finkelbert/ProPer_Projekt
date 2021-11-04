@@ -23,6 +23,8 @@ if(length(comp_df$word_label) > 0) comp_df <- mutate(
 
 ```
 
+# Prepare the scores_df table
+
 ```{r prepare_scores_df, warning=FALSE}
 
 ## check up on correct allocations: check how many CoMs within manually segmented intervals and choose the one associated with highest mass if there are multiple CoMs
@@ -83,6 +85,8 @@ scores_df <- droplevels(comp_df[c("file", "t", "speaker",
 scores_df <- dplyr::filter(scores_df, syll_mid==t)
 
 ```
+
+# Write scores_df table
 
 ```{r write_scores_df}
 ## Write the scores data file
