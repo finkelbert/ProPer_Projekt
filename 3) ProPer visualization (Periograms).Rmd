@@ -10,6 +10,7 @@ require(ggplot2)
 require(dplyr)
 require(seewave)
 require(Cairo)
+require(zoo)
 
 raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 ```
@@ -97,29 +98,29 @@ main_df <- mutate(
   logPP = ifelse(logPP<0 | is.na(logPP), 0, logPP),
   ## create relative scales (0--1) 
   intensityRel = ifelse(
-    intensity<0, 0, round(intensity / max(intensity, na.rm=TRUE),7)), 
+    intensity<0, 0, round(intensity / max(intensity, na.rm=TRUE), 5)), 
   total_powerRel = ifelse(
-    total_power<0, 0, round(total_power / max(total_power, na.rm=TRUE),7)), 
+    total_power<0, 0, round(total_power / max(total_power, na.rm=TRUE), 5)), 
   postPP_rel = ifelse(
-    postPP<0, 0, round(postPP / max(postPP, na.rm=TRUE), 7)),
-  logPP_rel = round(logPP / max(logPP, na.rm=TRUE),7),
+    postPP<0, 0, round(postPP / max(postPP, na.rm=TRUE), 5)),
+  logPP_rel = round(logPP / max(logPP, na.rm=TRUE), 5),
   ########## periodic energy smoothing (log+smooth = smog)
   ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2),
   smogPP_20Hz = ifelse(
-    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 7)),
+    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
   ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 1),
   smogPP_12Hz = ifelse(
-    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 7)),
+    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 1),
   smogPP_8Hz = ifelse(
-    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 7)),
+    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
   smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 1),
   smogPP_5Hz = ifelse(
-    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 7)),
+    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5)),
   ########## F0 interpolating and smooting
   f0_interp = pracma::interp1(t, f0_smooth),
   f0_interp_stretch = ifelse(
@@ -130,7 +131,13 @@ main_df <- mutate(
   ### 6Hz low-pass filter (166.7ms  intervals): "vibrato smooth"
   f0_interp_stretch_smooth = round(bwfilter(wave = f0_interp_stretch, f = 1000, to = 6, n = 1), 2),
   f0_interp_smooth = ifelse(
-    !is.na(f0_interp), f0_interp_stretch_smooth, NA)
+    !is.na(f0_interp), f0_interp_stretch_smooth, NA),
+  ### stretched F0 time-series with "real' local minima (used to compute CoG in script #4)
+  f0_realFloorStretch = ifelse(smogPP_20Hz > 0.1, f0_interp_stretch_smooth, NA),
+  f0_realFloorStretch = na.locf(f0_realFloorStretch, na.rm=F),
+  f0_realFloorStretch = ifelse(
+    (is.na(f0_realFloorStretch) & t<min(which(!is.na(f0_realFloorStretch)))),
+    f0_realFloorStretch[min(which(!is.na(f0_realFloorStretch)))], f0_realFloorStretch)
   )
 
 ## get the filemames list 
@@ -146,7 +153,7 @@ Use the comment in/out (#) to toggle visualization of different data components.
 ```{r plot_singles, warning=FALSE, echo=FALSE}
 
 ### chosse the f0 scale for the y-axis in the plots
-ySclae1 <- c('tokenScale', 'speakerScale', 'dataScale')[1]
+yScale1 <- c('tokenScale', 'speakerScale', 'dataScale')[1]
 
 ##################################
 ########### loop start ###########
@@ -165,18 +172,18 @@ sel_file1 <- f
 
 single_token1 <- dplyr::filter(main_df, file==sel_file1)
 
-plotFloor1 <- ifelse(ySclae1 == 'tokenScale', single_token1$plotFloorToken[1],
-                     ifelse(ySclae1 == 'speakerScale', single_token1$plotFloorSpeaker[1],
-                            ifelse(ySclae1 == 'dataScale', single_token1$plotFloorData[1], -275)))
-plotUnits1 <- ifelse(ySclae1 == 'tokenScale', round(single_token1$f0_token_range[1]/30),
-                     ifelse(ySclae1 == 'speakerScale', round(single_token1$f0_speaker_range[1]/30),
-                            ifelse(ySclae1 == 'dataScale', round(single_token1$f0_data_range[1]/30), 12)))
-f0range1 <- ifelse(ySclae1 == 'tokenScale', single_token1$f0_token_range[1],
-                     ifelse(ySclae1 == 'speakerScale', single_token1$f0_speaker_range[1],
-                            ifelse(ySclae1 == 'dataScale', single_token1$f0_data_range[1], 350)))
-f0max1 <- ifelse(ySclae1 == 'tokenScale', single_token1$f0_token_max[1],
-                     ifelse(ySclae1 == 'speakerScale', single_token1$f0_speaker_max[1],
-                            ifelse(ySclae1 == 'dataScale', single_token1$f0_data_max[1], 425)))
+plotFloor1 <- ifelse(yScale1 == 'tokenScale', single_token1$plotFloorToken[1],
+                     ifelse(yScale1 == 'speakerScale', single_token1$plotFloorSpeaker[1],
+                            ifelse(yScale1 == 'dataScale', single_token1$plotFloorData[1], -275)))
+plotUnits1 <- ifelse(yScale1 == 'tokenScale', round(single_token1$f0_token_range[1]/30),
+                     ifelse(yScale1 == 'speakerScale', round(single_token1$f0_speaker_range[1]/30),
+                            ifelse(yScale1 == 'dataScale', round(single_token1$f0_data_range[1]/30), 12)))
+f0range1 <- ifelse(yScale1 == 'tokenScale', single_token1$f0_token_range[1],
+                     ifelse(yScale1 == 'speakerScale', single_token1$f0_speaker_range[1],
+                            ifelse(yScale1 == 'dataScale', single_token1$f0_data_range[1], 350)))
+f0max1 <- ifelse(yScale1 == 'tokenScale', single_token1$f0_token_max[1],
+                     ifelse(yScale1 == 'speakerScale', single_token1$f0_speaker_max[1],
+                            ifelse(yScale1 == 'dataScale', single_token1$f0_data_max[1], 425)))
 
 periogram_single1 <-
   ggplot(single_token1, aes(x=t)) +
@@ -187,6 +194,7 @@ periogram_single1 <-
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
 ## interpolated & stretched F0 
   # geom_point(aes(y=f0_interp_stretch),color="red", alpha=.3, size=.3) +
+  # geom_point(aes(y=f0_realFloorStretch),color="orange", alpha=.5, size=.5) +
 ## periogram (smogPP)
   geom_line(aes(y=f0_interp_stretch_smooth),color="magenta2", alpha=single_token1$smogPP_20Hz, size=single_token1$smogPP_20Hz*5) +
 ########## Power/intensity
@@ -220,7 +228,7 @@ periogram_single1 <-
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
 print(periogram_single1)
 ##--save?
-ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_perTest(",perFloor,")_",ySclae1,".pdf"),device=cairo_pdf)
+ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_perTest(",perFloor,")_",yScale1,".pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
@@ -259,19 +267,19 @@ main_df <- mutate(
   ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2),
   smogPP_20Hz = ifelse(
-    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 7)),
+    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
   ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 1),
   smogPP_12Hz = ifelse(
-    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 7)),
+    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 1),
   smogPP_8Hz = ifelse(
-    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 7)),
+    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
   smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 1),
   smogPP_5Hz = ifelse(
-    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 7))
+    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
   )
 
 ```
@@ -281,7 +289,7 @@ main_df <- mutate(
 ```{r re-plot, warning=FALSE, echo=FALSE}
 
 ### chosse the f0 scale for the y-axis in the plots
-ySclae2 <- c('tokenScale', 'speakerScale', 'dataScale')[1]
+yScale2 <- c('tokenScale', 'speakerScale', 'dataScale')[1]
 
 ##################################
 ########### loop start ###########
@@ -296,18 +304,18 @@ sel_file2 <- f
 
 single_token2 <- dplyr::filter(main_df, file==sel_file2)
 
-plotFloor2 <- ifelse(ySclae2 == 'tokenScale', single_token2$plotFloorToken[1],
-                     ifelse(ySclae2 == 'speakerScale', single_token2$plotFloorSpeaker[1],
-                            ifelse(ySclae2 == 'dataScale', single_token2$plotFloorData[1], -275)))
-plotUnits2 <- ifelse(ySclae2 == 'tokenScale', round(single_token2$f0_token_range[1]/30),
-                     ifelse(ySclae2 == 'speakerScale', round(single_token2$f0_speaker_range[1]/30),
-                            ifelse(ySclae2 == 'dataScale', round(single_token2$f0_data_range[1]/30), 12)))
-f0range2 <- ifelse(ySclae2 == 'tokenScale', single_token2$f0_token_range[1],
-                     ifelse(ySclae2 == 'speakerScale', single_token2$f0_speaker_range[1],
-                            ifelse(ySclae2 == 'dataScale', single_token2$f0_data_range[1], 350)))
-f0max2 <- ifelse(ySclae2 == 'tokenScale', single_token2$f0_token_max[1],
-                     ifelse(ySclae2 == 'speakerScale', single_token2$f0_speaker_max[1],
-                            ifelse(ySclae2 == 'dataScale', single_token2$f0_data_max[1], 425)))
+plotFloor2 <- ifelse(yScale2 == 'tokenScale', single_token2$plotFloorToken[1],
+                     ifelse(yScale2 == 'speakerScale', single_token2$plotFloorSpeaker[1],
+                            ifelse(yScale2 == 'dataScale', single_token2$plotFloorData[1], -275)))
+plotUnits2 <- ifelse(yScale2 == 'tokenScale', round(single_token2$f0_token_range[1]/30),
+                     ifelse(yScale2 == 'speakerScale', round(single_token2$f0_speaker_range[1]/30),
+                            ifelse(yScale2 == 'dataScale', round(single_token2$f0_data_range[1]/30), 12)))
+f0range2 <- ifelse(yScale2 == 'tokenScale', single_token2$f0_token_range[1],
+                     ifelse(yScale2 == 'speakerScale', single_token2$f0_speaker_range[1],
+                            ifelse(yScale2 == 'dataScale', single_token2$f0_data_range[1], 350)))
+f0max2 <- ifelse(yScale2 == 'tokenScale', single_token2$f0_token_max[1],
+                     ifelse(yScale2 == 'speakerScale', single_token2$f0_speaker_max[1],
+                            ifelse(yScale2 == 'dataScale', single_token2$f0_data_max[1], 425)))
 
 periogram_single2 <-
   ggplot(single_token2, aes(x=t)) +
@@ -335,7 +343,7 @@ periogram_single2 <-
   theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
 print(periogram_single2)
 ##--save?
-ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_token2$perFloorStatus[1],")_",ySclae2,".pdf"),device=cairo_pdf)
+ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_token2$perFloorStatus[1],")_",yScale2,".pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
