@@ -83,7 +83,8 @@ scores_df <- droplevels(comp_df[c("file", "t", "speaker",
 
 
 ## reduce rows
-scores_df <- dplyr::filter(scores_df, syll_mid==t)
+# scores_df <- dplyr::filter(scores_df, syll_mid==t)
+scores_df <- dplyr::filter(scores_df, syllCoMMap == t)
 
 ```
 
