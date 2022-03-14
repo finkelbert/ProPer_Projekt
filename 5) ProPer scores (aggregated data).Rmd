@@ -12,13 +12,12 @@ comp_df <- read.csv("data_tables/comp_df.csv") %>% distinct(file, t, .keep_all =
 ## interpolate observations from the TextGrid manual annotations
 if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
   group_by(comp_df, file),
-  syll_mid = na.locf(syll_mid, na.rm=F),
-  syll_label = na.locf(syll_label, na.rm=F)
+  syll_mid = na.locf(syll_mid, na.rm=F)
   )
-
+# 
 if(length(comp_df$word_label) > 0) comp_df <- mutate(
   group_by(comp_df, file),
-  word_label = na.locf(word_label, na.rm=F)
+  word_mid = na.locf(syll_mid, na.rm=F)
   )
 
 ```
@@ -28,12 +27,7 @@ if(length(comp_df$word_label) > 0) comp_df <- mutate(
 ```{r prepare_scores_df, warning=FALSE}
 
 ## check up on correct allocations: check how many CoMs within manually segmented intervals and choose the one associated with highest mass if there are multiple CoMs
-comp_df <- mutate(
-  group_by(comp_df, file),
-  ## put CoM values in their time's row
-  CoMatCoM = ifelse(CoM == t , CoM, NA)
-  )
-comp_df <- mutate(
+scores_df <- mutate(
   ## calcualte the following for each syllabic interval (manual)
   group_by(comp_df, file, syll_mid),
   ## find the CoMs associated with each syllabic interval
@@ -72,19 +66,14 @@ comp_df <- mutate(
   mass_rel = ifelse( all(is.na(mass_rel)), NA, max(mass_rel, na.rm = T) )
   )
 
-## reduce columns
-scores_df <- droplevels(comp_df[c("file", "t", "speaker", 
-                                  "perFloorStatus", "relToStatus", "strengThreshStatus", "useManualStatus", "autoManStatus", "averageSyllStatus",
-                                  "f0_token_median", "f0_token_range", "f0_speaker_median", "f0_speaker_range", 
-                       if(length(comp_df$syll_mid) > 0) "syll_mid", "syll_label", "syll_boundsSeq", 
-                       "auto_boundsSeq", 
-                       if(length(comp_df$word_label) > 0) "word_label",
-                       "intervalDuration", "CoM", "CoG", "f0atCoM", "DeltaF0", "synchrony", "DeltaF0_rel", "sync_rel", "mass_rel")]) 
-
-
 ## reduce rows
 # scores_df <- dplyr::filter(scores_df, syll_mid==t)
 scores_df <- dplyr::filter(scores_df, syllCoMMap == t)
+
+## reduce columns
+mini_scores_df <- droplevels(subset(scores_df, select = -c(t, syll_start, syll_mid, syll_end, syll_bounds, word_start, word_mid, word_end, word_bounds, perFloorStatus, relToStatus,  strengThreshStatus, f0_data_min, f0_data_max, f0_data_range, smogPP_20Hz, smogPP_12Hz, smogPP_8Hz, smogPP_5Hz, f0_interp_stretch_smooth, f0_interp_smooth, f0_realFloorStretch, syll_boundsSeq, useManualStatus, autoManStatus, averageSyllStatus, auto_bounds, auto_boundsSeq, f0atCoG, PERatCoM, PERatCoG, CoM_corr, CoG_corr, CoMatCoM, syllCoMMap, syllCoMMap2, syllCoMflicts)))
+
+# nano_scores_df <- droplevels(subset(mini_scores_df, select = -c(f0_speaker_min, f0_speaker_max, f0_speaker_median, f0_speaker_mean, f0_speaker_range, f0_token_min, f0_token_max, f0_token_median, f0_token_mean, f0_token_range, CoM, CoG, intervalDuration_rel, DeltaF0Label, syncLabel, localSpeechRate)))
 
 ```
 
@@ -92,5 +81,7 @@ scores_df <- dplyr::filter(scores_df, syllCoMMap == t)
 
 ```{r write_scores_df}
 ## Write the scores data file
-write.csv(scores_df, "data_tables/scores_df.csv", row.names=FALSE)
+write.csv(mini_scores_df, "data_tables/scores_df.csv", row.names=FALSE)
+# write.csv(nano_scores_df, "data_tables/tiny_scores_df.csv", row.names=FALSE)
+
 ```
