@@ -321,12 +321,8 @@ CoG <- function(df) {
 # F0 and periodic energy values at centers
 f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0_interp_stretch_smooth[df$t == round(df$CoM)])
 f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0_interp_stretch_smooth[df$t == round(df$CoG)])
-# f0atCoM <- function(df) ifelse(df$CoM==0, 0, round(df$f0_interp_stretch_smooth[df$t == round(df$CoM)]))
-# f0atCoG <- function(df) ifelse(df$CoG==0, 0, round(df$f0_interp_stretch_smooth[df$t == round(df$CoG)]))
 PERatCoM <- function(df) ifelse(df$CoM==0, 0, df$smogPP_20Hz[df$t == round(df$CoM)])
 PERatCoG <- function(df) ifelse(df$CoG==0, 0, df$smogPP_20Hz[df$t == round(df$CoG)])
-# PERatCoM <- function(df) ifelse(df$CoM==0, 0, round(df$smogPP_20Hz[df$t == round(df$CoM)],4))
-# PERatCoG <- function(df) ifelse(df$CoG==0, 0, round(df$smogPP_20Hz[df$t == round(df$CoG)],4))
 #
 # Synchrony between CoG and CoM: 
 synchrony <- function(df) {
@@ -381,15 +377,13 @@ comp_df <- mutate(
   ## ignore weak intervals
   CoM_corr = ifelse(CoM!=lag(CoM) | (!is.na(CoM) & is.na(lag(CoM))), CoM, NA),
   CoG_corr = ifelse(CoG!=lag(CoG) | (!is.na(CoG) & is.na(lag(CoG))), CoG, NA),
+  ## put CoM values in their time's row
+  CoMatCoM = ifelse(CoM == t , CoM, NA),
   ## '∆F0': add token-initial values (realtive to speaker's median F0)
   DeltaF0 = ifelse(
     min(which(!is.na(CoM)), na.rm = T) == t+1, f0atCoM - f0_speaker_median, 
     ifelse(
       (!is.na(auto_bounds) & !is.na(f0atCoM)), DeltaF0, NA)),
-  # DeltaF0 = ifelse(
-  #   auto_bounds==min(auto_bounds, na.rm=T), f0atCoM - f0_speaker_median, 
-  #   ifelse(
-  #     (!is.na(auto_bounds) & !is.na(f0atCoM)), DeltaF0, NA)),
   ## '∆F0': stretch observations
   DeltaF0 = ifelse(
     !is.na(mass), na.locf(DeltaF0, na.rm=F), NA),
@@ -441,6 +435,19 @@ comp_df <- mutate(
   localSpeechRate = ifelse(
     !is.na(CoM_diff_relInterp), round(CoM_diff_relSmoothInterp, 4), NA)
   )
+
+## interpolate labels from the TextGrid manual annotations
+if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
+  group_by(comp_df, file),
+  # syll_mid = na.locf(syll_mid, na.rm=F),
+  syll_label = na.locf(syll_label, na.rm=F)
+  )
+if(length(comp_df$word_label) > 0) comp_df <- mutate(
+  group_by(comp_df, file),
+  # word_mid = na.locf(syll_mid, na.rm=F),
+  word_label = na.locf(word_label, na.rm=F)
+  )
+
 
 ```
 ## Plot periograms with computations overlaid
