@@ -516,7 +516,7 @@ plot_comp <-
   ##### ∆F0 / F0 @ CoM
   geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=2, family= "Helvetica") + 
   ##### Synchrony
-  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="purple", size=2, family= "Helvetica") +
+  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="darkorchid", size=2, family= "Helvetica") +
   ##### Mass
   geom_text(aes(x=single_token$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
 ####################### legend
@@ -530,8 +530,8 @@ plot_comp <-
   geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*4), label="∆F0", color="blue", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
   geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*2), label="low < 0 < high", color="blue", alpha=1, size=2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
   ##### Synchrony
-  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*2), label="Synchrony", check_overlap=T, color="purple", size=2.5, family= "Helvetica", hjust="left") +
-  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*4), label="fall < 0 < rise", check_overlap=T, color="purple", size=2, family= "Helvetica", hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*2), label="Synchrony", check_overlap=T, color="darkorchid", size=2.5, family= "Helvetica", hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*4), label="fall < 0 < rise", check_overlap=T, color="darkorchid", size=2, family= "Helvetica", hjust="left") +
   ##### MAss
   geom_text(aes(x=maxBounds+10, y=midLow+plotUnits), label="Mass", check_overlap=T, color="red", size=2.5, family= "Helvetica", hjust="left") + 
   geom_text(aes(x=maxBounds+10, y=midLow-plotUnits, label="weak < 1 < strong"), check_overlap=T, color="red", size=2, family= "Helvetica", hjust="left") + 
