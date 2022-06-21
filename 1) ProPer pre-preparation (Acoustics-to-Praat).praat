@@ -9,23 +9,26 @@
 #		periodic energy curves. The pitch tier object is used for standard 
 #		F0 information, which can be tweaked in fields of this script's form, 
 #		and can be manually corrected when the "inspect" option is switched on.
-# IMPORTANT:	Before running the script, make sure to replace the 'xxx' in the 
-#		directories with your relevant directory string (either in the script 
-#		or in the prompted form). Also, make sure that your audio files are in 
-#		the "Audio" directory.
+# IMPORTANT:	The script reads and writes files from a fixed folder structure
+#   within the same directory as the script file itself. You can manually 
+#   override these default locations in the path fields in the script below
+#   or in the form that this script initiates.
+#
 # AUTHORS:	Aviad Albert and Francesco Cangemi {a.albert / fcangemi} @uni-koeln.de
 #
-# To Run:   Select all and copy this text into a Praat script window and run.
+# To Run:   Copy this text into a Praat script window (or simply double click the
+#   file to directly open in a Praat script window) and run .
 
 ####### Input form
 form Input parameters
-        comment Replace "xxx" with your diretories info. Note your platform's syntax:
-        comment PC directories are often "C:\...\"; Mac directories are often "/Users/.../".
+        comment Change file paths below only if you need to override the default file locations
+        # comment Note your platform's syntax: PC directories are often "C:\...\"; Mac 
+        # comment directories are often "/Users/.../".
         # comment Do not forget the final slash!
-        sentence InDirAudio xxx/audio/
-        sentence OutDirPitchObject	xxx/praat_data/pitch_objects/
-        sentence OutDirPitchTier xxx/praat_data/pitch_tiers/
-        sentence OutDirIntensityTier xxx/praat_data/intensity_tiers/
+        sentence InDirAudio audio/
+        sentence OutDirPitchObject	praat_data/pitch_objects/
+        sentence OutDirPitchTier praat_data/pitch_tiers/
+        sentence OutDirIntensityTier praat_data/intensity_tiers/
         comment Manually inspect F0 for corrections?
         boolean inspect 1 
         comment F0 path finder settings (adjustable).
