@@ -26,19 +26,23 @@ comp_df <- droplevels(main_df)
   ############## Presets ##############
   #####################################
 #### using manual segmentation data:
-# choose [1] to consider manual segmentations (provided they exist)
-# choose [2] to use only the automatic detection algorithm
-useManual <- c(manual, FALSE)[1] # {[1] -- [2]}
+# choose [1] (TRUE) to consider manual segmentations (provided they exist)
+# choose [2] (FALSE) to use only the automatic detection algorithm
+useManual <- c(TRUE, FALSE)[1] # {[1] -- [2]}
 #
 #### automatic and manual boundary cross-feed:
+#
+######## **autoMan** ######## (If *useManual* = [1] (TRUE))
 # adjust the maximum allowed distance (in ms) between automatic and manual boundaries (based on periodic energy curve and TextGrid annotation, respectively)
-# lower values are more restrictive: at '0' boundaries are forced on the manual segmentations
+# lower values are more restrictive: at '0', the detected boundaries are forced on the TextGrid segmentations. 40 ms works well as default.
 autoMan <- 40 # {0 -- 100}
 #
+######## **averageSyll** ######## (If *useManual* = [2] (FALSE))
 #### determine expected syllable number by average (when 'useManual' = FALSE)
 # choose an average syllable size (in ms)
 averageSyll <- 175 # {75 -- 250}
 #
+## if you didn't provide TextGrid data but you know the exact amount of syllables you can plug that number +1 directly as the argument of the *expSyllNum* variable below.
   #####################################
   ########## find boundaries ##########
   #####################################
