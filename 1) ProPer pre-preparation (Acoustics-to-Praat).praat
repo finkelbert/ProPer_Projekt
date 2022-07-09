@@ -1,7 +1,7 @@
 # TITLE:	ProPer pre-preparation (I): Acoustics-to-Praat
 #   Extract acoustic data from Praat for further analysis with R 
 #   (see following files in workflow).
-# INPUT:	Audio files (preferably at least 44.1kHz sample-rate and 16bit PCM).
+# INPUT:	Audio files (preferably at 44.1 kHz sample-rate and 16 bit PCM).
 # OUTPUT:	Pitch objects, pitch tiers and intensity tiers.
 # NOTES:	This script creates the corresponding Praat objects (see "output") for 
 #		files in the audio directory ("input"). The extracted parameters in 
@@ -17,7 +17,7 @@
 # AUTHORS:	Aviad Albert and Francesco Cangemi {a.albert / fcangemi} @uni-koeln.de
 #
 # To Run:   Copy this text into a Praat script window (or simply double click the
-#   file to directly open in a Praat script window) and run .
+#   file to directly open in a Praat script window) and run.
 
 ####### Input form
 form Input parameters
