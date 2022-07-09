@@ -31,7 +31,7 @@ main_df <- droplevels(raw_df)
 perFloor <- .01 # {.001 -- .05} 
 #
 #### anchor for relative measurements, 
-# relative to the entire data ('data'), each tokeb ('token'), or speaker ('speaker'):
+# relative to the entire data ('data'), each token ('token'), or speaker ('speaker'):
 # preferably choose 'speaker' if applicable
 relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]} 
 #
