@@ -117,7 +117,7 @@ The following two variables depend on the previous setting: if *useManual = TRUE
 + **CoM**: The Center of Mass of periodic energy within intervals. 
 + **CoG**: The Center of Gravity of F0 within intervals (related to the Tonal Center of Gravity; Barnes et al. 2012).
 + **Synchrony**: The distance between the two centers (CoM and CoG) is indicative of the overall F0 trend within syllables (rising/falling/level).
-+ **∆F0**: We measure F0 within each interval at the center of mass of periodic energy (CoM), and we compute *∆F0*/*DeltaF0* in terms of the difference in F0 from previous interval to reflect the F0 shape across syllables. For the first interval we compute the difference from the speaker's median F0.
++ **∆F0**: We measure F0 within each interval at the center of mass of periodic energy (CoM), and we compute *∆F0* in terms of the difference in F0 from previous interval to reflect the F0 shape across syllables. For the first interval we compute the difference from the speaker's median F0.
 + **Speech rate**: We calculate the temporal distance between consecutive CoMs to yield a local Speech rate curve. For the first interval we compute the relative duration compared to the maximal interval duration in the same speech item.
 
 ### 5) ProPer scores: aggregated data
