@@ -99,7 +99,7 @@ The automatic boundary detector is designed to locate local minima in the period
 
 The first part of `ProPer analyses (Synchrony etc.)` presents adjustable presets that summarize the important variables for the boundary detection algorithm:
 
-+ **useManual**: Determine whether to consider manual segmentations in the automatic boundary detection algorithm, provided they exist (choose the default, [1], to yield *useManual = TRUE*). To prevent the algorithm from considering manual segmetations, regardless of whether they appear in the data, choose [2] to yield *useManual = FALSE*. 
++ **useManual**: Determine whether to consider manual segmentations (that is, boundaries from Praat's TextGrid) in the automatic boundary detection algorithm, provided they exist (choose the default, [1], to yield *useManual = TRUE*). To prevent the algorithm from considering TextGrid segmetations, regardless of whether they appear in the data, choose [2] to yield *useManual = FALSE*. 
 
 The following two variables depend on the previous setting: if *useManual = TRUE* you should adjust further using *autoMan* only, and if *useManual = FALSE* you should only adjust further using *averageSyll*.
 
