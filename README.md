@@ -1,6 +1,4 @@
----
-title: ""
----
+
 
 ![](https://finkelbert.files.wordpress.com/2021/06/proper-logo4a-small-tight.png)
 
