@@ -68,10 +68,10 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   pitch_object <- pitch.read(f)
   time <- round(pitch_object$t,3)*1000
   pitch_ceiling <- 1000 #fixed to periods up to 1000Hz
-  ### row1 = Praat's path finder choice for F0 candidates -- we're not using these eventually
+  #### row1 = Praat's path finder choice for F0 candidates ("strength_row1" is an altrnative to "strength_rowmax")
   # strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
-  # f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
-  # f0_row1[which(f0_row1==0)] <- NA
+  f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
+  f0_row1[which(f0_row1==0)] <- NA
   strengthArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["strengthArray"]]), 2, function(x) ifelse(x==0,NA,x))
   freqArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["frequencyArray"]]), 2, function(x) ifelse(x==0,NA,x))
   zero_one_freqs <- apply(freqArray, 2, function(x) ifelse(x>pitch_ceiling, 0, 1))
