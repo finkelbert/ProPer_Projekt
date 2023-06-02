@@ -16,9 +16,30 @@ require(dplyr)
 ```{r pre_prepare_raw_df, warning=FALSE}
 ##########--- Read and collect Praat data into R tables ---########## 
 
+##### Paths
+files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
+##
+files_pitchTier <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
+##
+files_pitchObject <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
+##
+files_textGrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
+
+##### Full-time 
+# (get the full time table of each audio file based on its intensity tier)
+fullTime_df <- plyr::ldply(files_intensity, function(f){  
+  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
+  file <- filename[,2] 
+  filenameBits <- str_match(f,".*/([^/._]*)_([^/._]*)\\.[^/]*$")
+  speaker <- filenameBits[,2]
+  variable <- filenameBits[,3]
+  it <- it.read(f)
+  time <- seq(it[["tmin"]], it[["tmax"]], 0.001) * 1000
+  data.frame(file, t=as.integer(as.character(time)), speaker, variable)
+})
+
 ##### Intensity 
 # (get intensity data)
-files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
 intensity_df <- plyr::ldply(files_intensity, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
@@ -27,21 +48,8 @@ intensity_df <- plyr::ldply(files_intensity, function(f){
   data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,4))
 })
 
-##### Full-time 
-# (get the full time of the file from the intensity tier)
-fullTime_df <- plyr::ldply(files_intensity, function(f){  
-  filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
-  file <- filename[,2] 
-  filenameBits <- str_match(f,".*/([^/._]*)_([^/._]*)\\.[^/]*$")
-  speaker <- filenameBits[,2]
-  it <- it.read(f)
-  time <- seq(it[["tmin"]], it[["tmax"]], 0.001) * 1000
-  data.frame(file, t=as.integer(as.character(time)), speaker)
-})
-
 ##### F0: Pitch Tier 
 # (get the smooth F0 curve)
-files_pitchTier <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTier",full.names=T)
 f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
@@ -54,16 +62,16 @@ f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){
 ##### Pitch object  
 # (get the Strength, i.e. the periodic fraction from Praat's autocorrelation, and frequency of selected pitch candidates: rowmax = highest strength value within the frequency range (up to 'pitch_ceiling'); row1 = Praat's path finder choice for F0 candidates
 # (Note: this may take longer to process!!!)
-files_pitchObject <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
 pitchObject_df <- plyr::ldply(files_pitchObject, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
   pitch_object <- pitch.read(f)
   time <- round(pitch_object$t,3)*1000
   pitch_ceiling <- 1000 #fixed to periods up to 1000Hz
-  strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
-  f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
-  f0_row1[which(f0_row1==0)] <- NA
+  ### row1 = Praat's path finder choice for F0 candidates -- we're not using these eventually
+  # strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
+  # f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
+  # f0_row1[which(f0_row1==0)] <- NA
   strengthArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["strengthArray"]]), 2, function(x) ifelse(x==0,NA,x))
   freqArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["frequencyArray"]]), 2, function(x) ifelse(x==0,NA,x))
   zero_one_freqs <- apply(freqArray, 2, function(x) ifelse(x>pitch_ceiling, 0, 1))
@@ -71,7 +79,8 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   strength_limited[, -1] <- mapply(`*`, strengthArray[, -1], zero_one_freqs[, -1])
   strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
-  data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,7), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
+  # data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,7), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
+  data.frame(file, t=as.integer(as.character(time)), strength_rowmax=round(strength_rowmax,7))
 })
 ```
 
