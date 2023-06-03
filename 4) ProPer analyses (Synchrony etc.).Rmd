@@ -13,20 +13,23 @@ require(purrr)
 require(Cairo)
 require(zoo)
 
+## Read the previous table: main_df
 main_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
+# check if TextGrid syllabic boundaries are provided
 manual <- length(main_df$syll_bounds) > 0
+
+## Switch to current table: comp_df
+comp_df <- droplevels(main_df)
 
 ```
 # Detect boundaries
 
 ```{r boundary_detection, warning=FALSE, include=FALSE}
-comp_df <- droplevels(main_df)
-#
   #####################################
   ############## Presets ##############
   #####################################
-#### using manual segmentation data:
-# choose [1] (TRUE) to consider manual segmentations (provided they exist)
+#### using TextGrid syllabic segmentation data:
+# choose [1] (TRUE) to consider TextGrid annotations (provided they exist)
 # choose [2] (FALSE) to use only the automatic detection algorithm
 useManual <- c(TRUE, FALSE)[1] # {[1] -- [2]}
 #
