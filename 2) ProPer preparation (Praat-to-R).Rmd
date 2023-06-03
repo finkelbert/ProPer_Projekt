@@ -60,7 +60,7 @@ f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){
 })
 
 ##### Pitch object  
-# (get the Strength, i.e. the periodic fraction from Praat's autocorrelation, and frequency of selected pitch candidates: rowmax = highest strength value within the frequency range (up to 'pitch_ceiling'); row1 = Praat's path finder choice for F0 candidates
+# (get the Strength, i.e. the *similarity index* or *periodic fraction* from Praat's autocorrelation. Also, get the raw pre-smoothing F0)
 # (Note: this may take longer to process!!!)
 pitchObject_df <- plyr::ldply(files_pitchObject, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
@@ -68,7 +68,7 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   pitch_object <- pitch.read(f)
   time <- round(pitch_object$t,3)*1000
   pitch_ceiling <- 1000 #fixed to periods up to 1000Hz
-  #### row1 = Praat's path finder choice for F0 candidates ("strength_row1" is an altrnative to "strength_rowmax")
+  ###### row1 = Praat's path finder choice for F0 candidates 
   # strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
   f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
   f0_row1[which(f0_row1==0)] <- NA
@@ -77,10 +77,11 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   zero_one_freqs <- apply(freqArray, 2, function(x) ifelse(x>pitch_ceiling, 0, 1))
   strength_limited <- strengthArray
   strength_limited[, -1] <- mapply(`*`, strengthArray[, -1], zero_one_freqs[, -1])
+  ###### rowmax = highest strength value within the frequency range (up to 'pitch_ceiling')
   strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
   # data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,7), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
-  data.frame(file, t=as.integer(as.character(time)), strength_rowmax=round(strength_rowmax,7))
+  data.frame(file, t=as.integer(as.character(time)), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
 })
 ```
 
@@ -157,15 +158,15 @@ raw_df <- left_join(raw_df, pitchObject_df, by = c("file", "t"))
 if(exists("textGridSyll_df")) raw_df <- left_join(raw_df, textGridSyll_df, by = c("file", "t"))
 if(exists("textGridWord_df")) raw_df <- left_join(raw_df, textGridWord_df, by = c("file", "t"))
 
-##### Calculate and add the total-power and the periodic-power vectors
-raw_df <- mutate(group_by(raw_df,file),
-                  total_power = round(4e-10 * 10^(intensity / 10), 9),
-                  periodic_power = round(total_power * strength_rowmax, 9)
-                  )
+# ##### Calculate and add the total-power and the periodic-power vectors
+# raw_df <- mutate(group_by(raw_df,file),
+#                   total_power = round(4e-10 * 10^(intensity / 10), 9),
+#                   periodic_power = round(total_power * strength_rowmax, 9)
+#                   )
 
 ```
 
-# Write raw_df table
+# Write the raw_df table
 
 ```{r write_raw_df, warning=FALSE}
 ##### Write the raw data
