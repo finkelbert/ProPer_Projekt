@@ -83,9 +83,12 @@ if(length(main_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   max_speaker_strength = max(strength_rowmax, na.rm=T),
   f0_speaker_min = round(min(f0_smooth, na.rm=T)),
   f0_speaker_max = round(max(f0_smooth, na.rm=T)),
+  f0_speaker_min_median = round(median(f0_token_min, na.rm=T)),
+  f0_speaker_max_median = round(median(f0_token_max, na.rm=T)),
   f0_speaker_median = round(median(f0_smooth, na.rm = T)),
   f0_speaker_mean = round(mean(f0_smooth, na.rm = T)),
-  f0_speaker_range = round(f0_speaker_max - f0_speaker_min)
+  f0_speaker_range = round(f0_speaker_max - f0_speaker_min),
+  f0_speaker_range_median = round(f0_speaker_max_median - f0_speaker_min_median)
   )
 ## mutate by token
 main_df <- mutate(
