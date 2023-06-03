@@ -126,6 +126,9 @@ ProPer metrics are measured within a periodic energy mass that has a center (CoM
 ***
 
 #### References
+
+**Also**: [check out the list of studies using ProPer](https://osf.io/g5ha9).
+
 Albert, Aviad, Francesco Cangemi & Martine Grice. 2018. Using periodic energy to enrich acoustic representations of pitch in speech: A demonstration. In *Proceedings of the 9th International Conference on Speech Prosody*. Poznań, Poland. [link](https://www.isca-speech.org/archive/SpeechProsody_2018/abstracts/220.html)
 
 Albert, Aviad, Francesco Cangemi & Martine Grice. 2019. Can you draw me a question? Winning presentation at the *Prosody Visualization Challenge 2*. ICPhS, Melbourne, Australia. [link](https://www.researchgate.net/publication/335096657_Can_you_draw_me_a_question?channel=doi&linkId=5d4e86644585153e5949fcb7&showFulltext=true)
