@@ -33,7 +33,8 @@ files <- files[!duplicated(files)==TRUE]
 ## Prepare periodic energy & F0 curves:
 
 1. Adjust 'perFloor' and 'relTo' in first rows.
-2. Use the following plots and codes to verify and change 'perFloor' values.
+2. Run the entire chunk.
+3. Run the following plotting chunk and use the plots to verify and choose optimal 'perFloor' value(s) -- the ensuing chunk is designed to map unique 'perFloor' values for selected speakers (or tokens).
 
 ```{r prepare_main_df, warning=FALSE}
 #
@@ -49,10 +50,6 @@ perFloor <- .01 # {.001 -- .05}
 # preferably choose 'speaker' if applicable
 relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]} 
 #
-#### set floor for periodic fraction (1.00 = 100%):
-# keep at 0.25 unless you need this changed
-# strengThresh <- 0.25 # {0 -- .5} 
-#
   #####################################
   ####### compute new variables #######
   #####################################
@@ -62,7 +59,6 @@ main_df <- mutate(
 ## keep records of adjusted variables
   perFloorStatus = perFloor, 
   relToStatus = relTo,
-  # strengThreshStatus = strengThresh,
 ## find values for entire data set
   max_data_per_power = max(periodic_power, na.rm=T),
   max_data_strength = max(strength_rowmax, na.rm=T),
@@ -379,7 +375,7 @@ ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_tok
 ```{r minimize_main_df}
 
 ## get rid of some variables
-mini_main_df <- droplevels(subset(main_df, select = -c(f0_smooth, intensity, f0_row1, strength_rowmax, total_power, periodic_power, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodic_fraction, postPP, logPP, f0_interp, f0_interp_stretch))) #strength_row1, strengThresh_indeed, 
+mini_main_df <- droplevels(subset(main_df, select = -c(f0_smooth, intensity, f0_row1, strength_rowmax, total_power, periodic_power, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodic_fraction, postPP, logPP, f0_interp, f0_interp_stretch)))
 
 ```
 
