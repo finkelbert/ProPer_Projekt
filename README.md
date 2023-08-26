@@ -10,7 +10,7 @@ Aviad Albert, Francesco Cangemi, T. Mark Ellison & Martine Grice
 ## Instructions for the ProPer workflow
 (last update: 9 July 2022)
 
-### 0. Before you begin ttt
+### 0. Before you begin
 
 This workflow requires [Praat](https://www.fon.hum.uva.nl/praat/), [R](https://www.r-project.org/) and 
 [RStudio](https://www.rstudio.com/).  
