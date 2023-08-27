@@ -30,7 +30,7 @@ form Input parameters
         sentence OutDirPitchTier praat_data/pitch_tiers/
         sentence OutDirIntensityTier praat_data/intensity_tiers/
         comment Manually inspect F0 for corrections?
-        boolean inspect 1 
+        boolean inspect 1
         comment F0 path finder settings (adjustable).
         real silenceThr 0.03
         real voicingThr 0.2
