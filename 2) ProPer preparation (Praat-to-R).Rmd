@@ -7,8 +7,8 @@ rm(list = ls())
 
 ## Load required libraries 
 require(rPraat)
-require(stringr)
-require(dplyr)
+require(tidyverse)
+
 ```
 
 # Harvest acoustic data
@@ -69,7 +69,6 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   time <- round(pitch_object$t,3)*1000
   pitch_ceiling <- 1000 #fixed to periods up to 1000Hz
   ###### row1 = Praat's path finder choice for F0 candidates 
-  # strength_row1 <- apply(pitch.toArray(pitch_object)[["strengthArray"]], 2, function(x) x[1])
   f0_row1 <- apply(pitch.toArray(pitch_object)[["frequencyArray"]], 2, function(x) x[1])
   f0_row1[which(f0_row1==0)] <- NA
   strengthArray <- apply(as.data.frame(pitch.toArray(pitch_object)[["strengthArray"]]), 2, function(x) ifelse(x==0,NA,x))
@@ -80,8 +79,8 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   ###### rowmax = highest strength value within the frequency range (up to 'pitch_ceiling')
   strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
-  # data.frame(file, t=as.integer(as.character(time)), strength_row1=round(strength_row1,7), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
-  data.frame(file, t=as.integer(as.character(time)), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
+  data.frame(file, t=as.integer(as.character(time)), f0_raw=round(f0_row1,2), periodicStrength=round(strength_rowmax,7))
+  # data.frame(file, t=as.integer(as.character(time)), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
 })
 ```
 
@@ -114,7 +113,7 @@ if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
   t = syll_bounds
   )
 #
-if(exists("textGridSyll_df")) textGridSyll_df <- filter(textGridSyll_df, !is.na(t))
+if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(t))
 
 ```
 
@@ -143,7 +142,7 @@ if(exists("textGridWord_df")) textGridWord_df <- mutate(
   t = word_bounds
   )
 #
-if(exists("textGridWord_df")) textGridWord_df <- filter(textGridWord_df, !is.na(t))
+if(exists("textGridWord_df")) textGridWord_df <- dplyr::filter(textGridWord_df, !is.na(t))
   
 ```
 
@@ -157,12 +156,6 @@ raw_df <- left_join(raw_df, intensity_df, by = c("file", "t"))
 raw_df <- left_join(raw_df, pitchObject_df, by = c("file", "t"))
 if(exists("textGridSyll_df")) raw_df <- left_join(raw_df, textGridSyll_df, by = c("file", "t"))
 if(exists("textGridWord_df")) raw_df <- left_join(raw_df, textGridWord_df, by = c("file", "t"))
-
-# ##### Calculate and add the total-power and the periodic-power vectors
-# raw_df <- mutate(group_by(raw_df,file),
-#                   total_power = round(4e-10 * 10^(intensity / 10), 9),
-#                   periodic_power = round(total_power * strength_rowmax, 9)
-#                   )
 
 ```
 
