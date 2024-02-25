@@ -33,7 +33,7 @@ form Input parameters
         boolean inspect 1
         comment F0 path finder settings (adjustable).
         real silenceThr 0.03
-        real voicingThr 0.2
+        real voicingThr 0.4
         real octave 0.02
         real octavejump 0.5
         real voiceunvoiced 0.14
