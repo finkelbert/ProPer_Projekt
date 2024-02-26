@@ -6,11 +6,8 @@ Quantifying continuous prosody with periodic energy and F0 data to quantify pros
 rm(list = ls())
 
 ## Load required libraries 
-# require(ggplot2)
 require(tidyverse)
-# require(dplyr)
 require(seewave)
-# require(purrr)
 require(Cairo)
 require(zoo)
 require(signal)
@@ -330,8 +327,10 @@ CoM <- function(df) {
 comp_df <- mutate(
   group_by(comp_df, file),
 ##  f0_smooth_stretch_interp_smooth_drop interpolation
-  f0_smootcherpooth_dropPol = ifelse(
-  is.na(f0_smooth) | smogPP_20Hz < 0.1, NA, f0_smootcherpooth)
+  f0Floor4real = ifelse(
+  smogPP_20Hz < 0.1, NA, f0_ed_dropPol)
+  # f0_ed_dropPol = ifelse(
+  # is.na(f0_smooth) | smogPP_20Hz < 0.1, NA, f0_smootcherpooth)
 # ### stretched F0 time-series with "real' local minima (used to compute CoG)
 #   f0_realFloorStretch = ifelse(smogPP_20Hz > 0.1, f0_smootcherpooth, NA),
 #   f0_realFloorStretch = na.locf(f0_realFloorStretch, na.rm=F),
@@ -344,8 +343,8 @@ comp_df <- mutate(
 CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
   f0Floor <- ifelse(df$f0_speaker_range_median > 99, 
-                    min(df$f0_smootcherpooth_dropPol, na.rm=T) - .1 * df$f0_speaker_range_median, 
-                    min(df$f0_smootcherpooth_dropPol, na.rm=T) - .1 * 100)
+                    min(df$f0Floor4real, na.rm=T) - .1 * df$f0_speaker_range_median, 
+                    min(df$f0Floor4real, na.rm=T) - .1 * 100)
                     # min(df$f0_realFloorStretch, na.rm=T) - .1 * df$f0_speaker_range_median, 
                     # min(df$f0_realFloorStretch, na.rm=T) - .1 * 100)
   ifelse(
@@ -538,7 +537,7 @@ plot_comp <-
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
   ##### interpolated
   # geom_point(aes(y=f0_smootcherpooth),color="red", alpha=.3, size=.3) +
-  # geom_point(aes(y=f0_smootcherpooth_dropPol),color="purple", alpha=1, size=.3) +
+  # geom_point(aes(y=f0_ed_dropPol),color="purple", alpha=1, size=.3) +
   ##### periogram (smogPP)
   geom_line(aes(y=f0_smootcherpooth),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
 ####################### Periodic energy curve
