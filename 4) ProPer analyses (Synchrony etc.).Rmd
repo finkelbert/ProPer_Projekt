@@ -10,7 +10,7 @@ require(tidyverse)
 require(seewave)
 require(Cairo)
 require(zoo)
-require(signal)
+# require(signal)
 
 ## Read the previous table: main_df
 main_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
@@ -21,10 +21,13 @@ manual <- length(main_df$syll_bounds) > 0
 comp_df <- droplevels(main_df)
 
 ```
-# Detect boundaries
 
-```{r boundary_detection, warning=FALSE, include=FALSE}
-  #####################################
+## Detect boundaries
+
+### Presets
+
+```{r boundary_detection_presets, warning=FALSE, include=FALSE}
+#####################################
   ############## Presets ##############
   #####################################
 #### using TextGrid syllabic segmentation data:
@@ -44,14 +47,19 @@ autoMan <- 40 # {0 -- 100}
 # choose an average syllable size (in ms)
 averageSyll <- 175 # {75 -- 250}
 #
-### prepare butterworth low-pass filters
-LowPass40Hz <- butter(n = 2, W = 40/(1000/2), type = "low")
-LowPass20Hz <- butter(n = 2, W = 20/(1000/2), type = "low")
-LowPass2Hz <- butter(n = 1, W = 2/(1000/2), type = "low")
-# LowPassDyn <- butter(n = 2, W = detection_sensitivity/(1000/2), type = "low")
+# ### prepare butterworth low-pass filters
+# LowPass40Hz <- butter(n = 2, W = 40/(1000/2), type = "low")
+# LowPass20Hz <- butter(n = 2, W = 20/(1000/2), type = "low")
+# LowPass2Hz <- butter(n = 1, W = 2/(1000/2), type = "low")
+# # LowPassDyn <- butter(n = 2, W = detection_sensitivity/(1000/2), type = "low")
 #
 ## if you didn't provide TextGrid data but you know the exact amount of syllables you can plug that number +1 directly as the argument of the *expSyllNum* variable below.
-  #####################################
+```
+
+### Find boundaries
+
+```{r boundary_detection_loop, warning=FALSE, include=FALSE}
+#####################################
   ########## find boundaries ##########
   #####################################
 ## pre-loop
@@ -75,8 +83,8 @@ comp_df <- mutate(
 ## compute and smooth 1st and 2nd derivatives of the periodic energy curve
   smogPP_1stDer = ifelse(t==0, 0, diff(smogPP_20Hz)*1000), # ifelse(t==0, 0, (smogPP_20Hz - lag(smogPP_20Hz,1))*1000),
   # smogPP_1stDer = ifelse(t==0, 0, (smogPP_20Hz - lag(smogPP_20Hz,1))*1000),
-  smogPP_1stDer = filter(LowPass40Hz, smogPP_1stDer),
-  # smogPP_1stDer = bwfilter(wave = smogPP_1stDer, f = 1000, to = 40, n = 2),
+  # smogPP_1stDer = filter(LowPass40Hz, smogPP_1stDer),
+  smogPP_1stDer = bwfilter(wave = smogPP_1stDer, f = 1000, to = 40, n = 2, output = "Sample"),
   smogPP_2ndDer = ifelse(t==0, 0, diff(smogPP_1stDer)*20) # ifelse(t==0, 0, (smogPP_1stDer - lag(smogPP_1stDer,1))*20)
   # smogPP_2ndDer = ifelse(t==0, 0, (smogPP_1stDer - lag(smogPP_1stDer,1))*20)
   )
@@ -139,12 +147,12 @@ trySensitivity <- function(ee, detection_sensitivity) {
   if (length(ee$boundetect) >= expSyllNum)
     return( ee )
   mutate(group_by(ee$single_token),
-         smogPP_2ndDerDyn = # filter(butter(n = 2, W = detection_sensitivity/(1000/2), type = "low”), smogPP_2ndDer)
+         smogPP_2ndDerDyn = 
            bwfilter(
            wave = smogPP_2ndDer,
            f = 1000,
            to = detection_sensitivity,
-           n = 2)) -> ee$single_token
+           n = 2, output = "Sample")) -> ee$single_token
   ee$boundetect <- mkBoundetect( ee$single_token )
   ee
 }
@@ -328,18 +336,18 @@ comp_df <- mutate(
   group_by(comp_df, file),
 ##  f0_smooth_stretch_interp_smooth_drop interpolation
   f0Floor4real = ifelse(
-  smogPP_20Hz < 0.1, NA, f0_ed_dropPol)
-  # f0_ed_dropPol = ifelse(
-  # is.na(f0_smooth) | smogPP_20Hz < 0.1, NA, f0_smootcherpooth)
+  smogPP_20Hz < 0.1, NA, f0Post_dropInterp)
+  # f0Post_dropInterp = ifelse(
+  # is.na(f0_smooth) | smogPP_20Hz < 0.1, NA, f0Post)
 # ### stretched F0 time-series with "real' local minima (used to compute CoG)
-#   f0_realFloorStretch = ifelse(smogPP_20Hz > 0.1, f0_smootcherpooth, NA),
+#   f0_realFloorStretch = ifelse(smogPP_20Hz > 0.1, f0Post, NA),
 #   f0_realFloorStretch = na.locf(f0_realFloorStretch, na.rm=F),
 #   f0_realFloorStretch = ifelse(
 #     (is.na(f0_realFloorStretch) & t<min(which(!is.na(f0_realFloorStretch)))),
 #     f0_realFloorStretch[min(which(!is.na(f0_realFloorStretch)))], f0_realFloorStretch)
   )
 
-# CoG uses the interpolated F0 curve ('f0_smootcherpooth') multiplied by a 0--1 scale of the corresponding periodic energy  ('smogPP_20Hz')
+# CoG uses the interpolated F0 curve ('f0Post') multiplied by a 0--1 scale of the corresponding periodic energy  ('smogPP_20Hz')
 CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
   f0Floor <- ifelse(df$f0_speaker_range_median > 99, 
@@ -349,12 +357,12 @@ CoG <- function(df) {
                     # min(df$f0_realFloorStretch, na.rm=T) - .1 * 100)
   ifelse(
     sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
-    round(sum((df$f0_smootcherpooth - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_smootcherpooth - f0Floor) * df$smogPP_20Hz, na.rm=T),3))
+    round(sum((df$f0Post - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0Post - f0Floor) * df$smogPP_20Hz, na.rm=T),3))
   }
 #
 # F0 and periodic energy values at centers
-f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0_smootcherpooth[df$t == round(df$CoM)])
-f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0_smootcherpooth[df$t == round(df$CoG)])
+f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0Post[df$t == round(df$CoM)])
+f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0Post[df$t == round(df$CoG)])
 PERatCoM <- function(df) ifelse(df$CoM==0, 0, df$smogPP_20Hz[df$t == round(df$CoM)])
 PERatCoG <- function(df) ifelse(df$CoG==0, 0, df$smogPP_20Hz[df$t == round(df$CoG)])
 #
@@ -465,8 +473,8 @@ comp_df <- mutate(
       (is.na(CoM_diff_relInterp) & t>=max(which(!is.na(CoM_diff_relInterp)))),
       CoM_diff_relInterp[max(which(!is.na(CoM_diff_relInterp)))], CoM_diff_relInterp)),
   ## 'CoM_diff_relInterpStretch': smooth and unstretch
-  CoM_diff_relSmoothInterp = filter(LowPass2Hz, CoM_diff_relInterpStretch),
-  # CoM_diff_relSmoothInterp = bwfilter(wave = CoM_diff_relInterpStretch, f = 1000, to = 2, n = 1),
+  # CoM_diff_relSmoothInterp = filter(LowPass2Hz, CoM_diff_relInterpStretch),
+  CoM_diff_relSmoothInterp = bwfilter(wave = CoM_diff_relInterpStretch, f = 1000, to = 5, n =2, output = "Sample"),
   localSpeechRate = ifelse(
     !is.na(CoM_diff_relInterp), round(CoM_diff_relSmoothInterp, 4), NA)
   )
@@ -536,10 +544,10 @@ plot_comp <-
   ##### smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
   ##### interpolated
-  # geom_point(aes(y=f0_smootcherpooth),color="red", alpha=.3, size=.3) +
-  # geom_point(aes(y=f0_ed_dropPol),color="purple", alpha=1, size=.3) +
+  # geom_point(aes(y=f0Post),color="red", alpha=.3, size=.3) +
+  # geom_point(aes(y=f0Post_dropInterp),color="purple", alpha=1, size=.3) +
   ##### periogram (smogPP)
-  geom_line(aes(y=f0_smootcherpooth),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
+  geom_line(aes(y=f0Post),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
 ####################### Periodic energy curve
   geom_line(aes(y=smogPP_20Hz*f0range+plotFloor),color="red", alpha=.75, size=.5) +
 ####################### Speech-rate curve
