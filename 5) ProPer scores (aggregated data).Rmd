@@ -17,7 +17,7 @@ if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
 # 
 if(length(comp_df$word_label) > 0) comp_df <- mutate(
   group_by(comp_df, file),
-  word_mid = na.locf(syll_mid, na.rm=F)
+  word_mid = na.locf(word_mid, na.rm=F)
   )
 
 ```
