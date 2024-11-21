@@ -152,10 +152,9 @@ trySensitivity <- function(ee, detection_sensitivity) {
 e <- new.env()
 e$single_token <- single_token
 e$boundetect <- c()
+## unsmoothing step size (e.g. 0.5 Hz up the low-pass filter)
 sensitivityStepSize <- 0.5
-# OLD
-# sensitivities <- (1:40) * sensitivityStepSize
-# NEW
+## smoothing low-pass filter range (starts higher when TG boundaries are available) 
 if(useManual==FALSE) sensitivities <- (1:40) * sensitivityStepSize
 if(useManual==TRUE) sensitivities <- (10:40) * sensitivityStepSize
 e -> ee
@@ -432,14 +431,6 @@ comp_df <- mutate(
   syncLabel = ifelse(
     round(synchrony)>0, paste0('+',round(sync_rel),' % (',abs(round(synchrony)),'ms)'), 
     paste0(round(sync_rel),' % (',abs(round(synchrony)),'ms)')),
-  
-  # DeltaF0Label = ifelse(
-  #   round(DeltaF0)>0, paste0('+',round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)'), 
-  #   paste0(round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)')),
-  # syncLabel = ifelse(
-  #   round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(abs(sync_rel)),'%)'), 
-  #   paste0(round(synchrony),' ms (',round(abs(sync_rel)),'%)')),
-  
   #####################################
   ############ speech-rate ############
   #####################################
