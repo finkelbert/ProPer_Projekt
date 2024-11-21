@@ -285,7 +285,7 @@ main_df <- mutate(
   #
   perFloorStatus = ifelse(
     speaker == "glenn",    
-    0.075,                
+    0.05,                
     perFloorStatus),
   #
   perFloorStatus = ifelse(
