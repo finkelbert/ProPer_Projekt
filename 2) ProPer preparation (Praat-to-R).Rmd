@@ -9,13 +9,6 @@ rm(list = ls())
 require(rPraat)
 require(tidyverse)
 
-```
-
-# Harvest acoustic data
-
-```{r pre_prepare_raw_df, warning=FALSE}
-##########--- Read and collect Praat data into R tables ---########## 
-
 ##### Paths
 files_intensity <- list.files(path="praat_data/intensity_tiers/", pattern="*.IntensityTier",full.names=T)
 ##
@@ -24,6 +17,12 @@ files_pitchTier <- list.files(path="praat_data/pitch_tiers/", pattern="*.PitchTi
 files_pitchObject <- list.files(path="praat_data/pitch_objects/", pattern="*.Pitch",full.names=T)
 ##
 files_textGrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
+
+```
+
+# Harvest acoustic data
+
+```{r pre_prepare_raw_df, warning=FALSE}
 
 ##### Full-time 
 # (get the full time table of each audio file based on its intensity tier)
@@ -48,6 +47,9 @@ intensity_df <- plyr::ldply(files_intensity, function(f){
   data.frame(file, t=as.integer(as.character(time)), intensity = round(intensitier$i,4))
 })
 
+# take a look:
+# IntensEx <- it.read(files_intensity[1])
+
 ##### F0: Pitch Tier 
 # (get the smooth F0 curve)
 f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){  
@@ -59,9 +61,12 @@ f0_smooth_df <- plyr::ldply(files_pitchTier, function(f){
   data.frame(file, t=as.integer(as.character(time)), f0_smooth=round(f0,2)) 
 })
 
+# take a look:
+# PitchTierExample <- pt.read(files_pitchTier[1])
+
 ##### Pitch object  
-# (get the Strength, i.e. the *similarity index* or *periodic fraction* from Praat's autocorrelation. Also, get the raw pre-smoothing F0)
-# (Note: this may take longer to process!!!)
+# get the Strength, i.e. the *similarity index* or *periodic fraction* from Praat's autocorrelation. Also, get the raw F0
+# Note: this may take longer to process!!!
 pitchObject_df <- plyr::ldply(files_pitchObject, function(f){  
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
   file <- filename[,2] 
@@ -80,11 +85,14 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
   strength_rowmax <- apply(strength_limited, 2, max, na.rm=T)
   strength_rowmax[is.infinite(strength_rowmax)] <- 0
   data.frame(file, t=as.integer(as.character(time)), f0_raw=round(f0_row1,2), periodicStrength=round(strength_rowmax,7))
-  # data.frame(file, t=as.integer(as.character(time)), f0_row1=round(f0_row1,2), strength_rowmax=round(strength_rowmax,7))
 })
+
+# take a look:
+# PitchObEx <- pitch.read(files_pitchObject[1])
+
 ```
 
-# Read TextGrids: 'Syllable' tier
+# Read TextGrids: 'Syllable' tier (optional, useful for anlyses and exposition)
 
 ```{r pre_prepare_TextGrids_Syllable, warning=FALSE}
 
@@ -115,9 +123,12 @@ if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
 #
 if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(t))
 
+# take a look:
+# TexGriEx <- tg.read(files_textGrid[1], encoding = "auto")
+
 ```
 
-# Read TextGrids: 'Word' tier
+# Read TextGrids: 'Word' tier (optional, useful for exposition purposes only)
 
 ```{r pre_prepare_TextGrids_Word, warning=FALSE}
 
@@ -159,9 +170,29 @@ if(exists("textGridWord_df")) raw_df <- left_join(raw_df, textGridWord_df, by = 
 
 ```
 
+## Optional chunk to trim your tables in case there are large portions of audio before and after the targets in each file (assuming annotated TextGrids were provided)
+
+```{r trimData}
+
+# require(zoo)
+
+# raw_df <- mutate(
+#   group_by(raw_df,file),
+#   syll_label = na.locf(syll_label, na.rm=F),
+#   syll_label = ifelse(row_number() < min(which(syll_label!=""))-150, "discard", syll_label),
+#   syll_label = ifelse(row_number()-1 > max(which(syll_label!=""))+150, "discard", syll_label),
+#   syll_label = as.factor(syll_label)
+#   )
+# 
+# raw_df <- droplevels(raw_df[-which(raw_df$syll_label=="discard") , ])
+
+```
+
 # Write the raw_df table
 
 ```{r write_raw_df, warning=FALSE}
+
 ##### Write the raw data
 write.csv(raw_df, "data_tables/raw_df.csv", row.names=FALSE)
+
 ```
