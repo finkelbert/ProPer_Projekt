@@ -57,27 +57,6 @@ relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]}; change the number in [
 
 ```{r new_variables_main_df, warning=FALSE}
 #
-## F0 interpolating, stretching and smoothing: mutate by token
-# main_df <- mutate(
-#   group_by(main_df, file),
-#   ##  f0_smooth_stretch ('f0_smootch')
-#   f0_smootch = ifelse(
-#     (is.na(f0_smooth) & t<min(which(!is.na(f0_smooth)))),
-#     f0_smooth[min(which(!is.na(f0_smooth)))], ifelse(
-#       (is.na(f0_smooth) & t>=max(which(!is.na(f0_smooth)))),
-#       f0_smooth[max(which(!is.na(f0_smooth)))], f0_smooth)),
-#   ##  f0_smooth_stretch_interp ('f0_smootchInterp')
-#   f0_smootchInterp = na.spline(f0_smootch, na.rm=F),
-#   ##  f0 post smooth_stretch_interp_smooth ('f0Post')
-#   f0Post = round(bwfilter(wave = f0_smootchInterp, f = 1000, to = 12, n = 1, output = "Sample"), 2),
-#   ##  f0 post without outer stretches ('f0Post_dropStretch')
-#   f0Post_dropStretch = ifelse(
-#   is.na(na.approx(f0_smooth, na.rm=F)), NA, f0Post),
-#   ##  f0 post without interpolation ('f0Post_dropInterp')
-#   f0Post_dropInterp = ifelse(
-#   is.na(f0_smooth), NA, f0Post)
-#   )
-
 ## F0 interpolating: mutate by token
 main_df <- mutate(
   group_by(main_df, file),
@@ -168,11 +147,6 @@ main_df <- mutate(
   postPP_scaled = round(scales::rescale(postPP, c(0,1)), 5)
   )
 # 
-# # TEST
-# require(scales) # rescale and combine distmats
-# timeSeries <- scales::rescale(timeSeries, c(0,1))
-
-#
 ########## periodic energy smoothing (log+smooth = smog)
 main_df <- mutate(
   group_by(main_df, file),
@@ -193,18 +167,6 @@ main_df <- mutate(
   smogPP_5Hz = ifelse(smogPP_5Hz < 0, 0, smogPP_5Hz),
   smogPP_5Hz = round(scales::rescale(smogPP_5Hz, c(0,1)), 5)
   )
-### tidy up: zero negatives and transform positives to a 0--1 scale 
-# main_df <- mutate(
-#   group_by(main_df, file),
-# smogPP_20HzOLD = ifelse(
-#   smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
-# smogPP_12HzOLD = ifelse(
-#   smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
-# smogPP_8HzOLD = ifelse(
-#   smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
-# smogPP_5HzOLD = ifelse(
-#   smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
-# )
 
 ```
 
@@ -356,27 +318,6 @@ main_df <- mutate(
   smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample"),
   smogPP_5Hz = ifelse(smogPP_5Hz < 0, 0, smogPP_5Hz),
   smogPP_5Hz = round(scales::rescale(smogPP_5Hz, c(0,1)), 5)
-#
-#   ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
-#   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2, output = "Sample"),
-#   ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
-#   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 2, output = "Sample"),
-#   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
-#   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 2, output = "Sample"),
-#   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
-#   smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample")
-#   )
-# ### tidy up: zero negatives and transform positives to a 0--1 scale 
-# main_df <- mutate(
-#   group_by(main_df, file),
-#   smogPP_20Hz = ifelse(
-#     smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
-#   smogPP_12Hz = ifelse(
-#     smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
-#   smogPP_8Hz = ifelse(
-#     smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
-#   smogPP_5Hz = ifelse(
-#     smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
   )
 
 ```
