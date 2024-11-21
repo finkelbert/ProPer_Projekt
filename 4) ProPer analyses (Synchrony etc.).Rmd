@@ -10,13 +10,11 @@ require(tidyverse)
 require(seewave)
 require(Cairo)
 require(zoo)
-# require(signal)
 
 ## Read the previous table: main_df
 main_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
 # check if TextGrid syllabic boundaries are provided
 manual <- length(main_df$syll_bounds) > 0
-
 ## Switch to current table: comp_df
 comp_df <- droplevels(main_df)
 
@@ -43,15 +41,9 @@ useManual <- c(TRUE, FALSE)[1] # {[1] -- [2]}
 autoMan <- 40 # {0 -- 100}
 #
 ######## **averageSyll** ######## (If *useManual* = [2] (FALSE))
-#### determine expected syllable number by average (when 'useManual' = FALSE)
+#### determine expected syllable number by average syllable duration (when 'useManual' = FALSE)
 # choose an average syllable size (in ms)
-averageSyll <- 175 # {75 -- 250}
-#
-# ### prepare butterworth low-pass filters
-# LowPass40Hz <- butter(n = 2, W = 40/(1000/2), type = "low")
-# LowPass20Hz <- butter(n = 2, W = 20/(1000/2), type = "low")
-# LowPass2Hz <- butter(n = 1, W = 2/(1000/2), type = "low")
-# # LowPassDyn <- butter(n = 2, W = detection_sensitivity/(1000/2), type = "low")
+averageSyll <- 150 # {75 -- 250}
 #
 ## if you didn't provide TextGrid data but you know the exact amount of syllables you can plug that number +1 directly as the argument of the *expSyllNum* variable below.
 ```
@@ -65,7 +57,7 @@ averageSyll <- 175 # {75 -- 250}
 ## pre-loop
 if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
-  syll_boundsSeq = na.locf(syll_bounds, na.rm=F),
+  syll_boundsSeq = zoo::na.locf(syll_bounds, na.rm=F),
   syll_boundsSeq = ifelse(is.na(syll_boundsSeq), 0, syll_boundsSeq)
   )
 #
@@ -81,12 +73,9 @@ comp_df <- mutate(
 comp_df <- mutate(
   group_by(comp_df, file),
 ## compute and smooth 1st and 2nd derivatives of the periodic energy curve
-  smogPP_1stDer = ifelse(t==0, 0, diff(smogPP_20Hz)*1000), # ifelse(t==0, 0, (smogPP_20Hz - lag(smogPP_20Hz,1))*1000),
-  # smogPP_1stDer = ifelse(t==0, 0, (smogPP_20Hz - lag(smogPP_20Hz,1))*1000),
-  # smogPP_1stDer = filter(LowPass40Hz, smogPP_1stDer),
+  smogPP_1stDer = ifelse(t==0, 0, diff(smogPP_20Hz)*1000), 
   smogPP_1stDer = bwfilter(wave = smogPP_1stDer, f = 1000, to = 40, n = 2, output = "Sample"),
-  smogPP_2ndDer = ifelse(t==0, 0, diff(smogPP_1stDer)*20) # ifelse(t==0, 0, (smogPP_1stDer - lag(smogPP_1stDer,1))*20)
-  # smogPP_2ndDer = ifelse(t==0, 0, (smogPP_1stDer - lag(smogPP_1stDer,1))*20)
+  smogPP_2ndDer = ifelse(t==0, 0, diff(smogPP_1stDer)*20)
   )
 #
 ## loop
@@ -164,7 +153,11 @@ e <- new.env()
 e$single_token <- single_token
 e$boundetect <- c()
 sensitivityStepSize <- 0.5
-sensitivities <- (1:40) * sensitivityStepSize
+# OLD
+# sensitivities <- (1:40) * sensitivityStepSize
+# NEW
+if(useManual==FALSE) sensitivities <- (1:40) * sensitivityStepSize
+if(useManual==TRUE) sensitivities <- (10:40) * sensitivityStepSize
 e -> ee
 for (sensitivity in sensitivities) {
   ee %>% trySensitivity(sensitivity) -> ee
@@ -197,7 +190,7 @@ unlink("data_tables/single_tokens/*.csv")
 if(useManual==TRUE) comp_df <- mutate(
   group_by(comp_df, file),
   # stretch auto_bounds observtions to locate missing auto_bounds
-  auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
+  auto_boundsSeq = zoo::na.locf(auto_bounds, na.rm=F),
   auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq),
   # locate missing auto_bounds (where a syll_bound exists)
   auto_bounds = ifelse(
@@ -206,8 +199,13 @@ if(useManual==TRUE) comp_df <- mutate(
        (syll_bounds > lead(auto_boundsSeq, autoMan) | syll_bounds +autoMan > max(t))),
     syll_bounds, auto_bounds),
   # re-stretch the auto_bounds observtions after change
-  auto_boundsSeq = na.locf(auto_bounds, na.rm=F),
-  auto_boundsSeq = ifelse(is.na(auto_boundsSeq), 0, auto_boundsSeq)
+  auto_boundsSeq = zoo::na.locf(auto_bounds, na.rm=F),
+  # NEW
+  auto_boundsSeqBounded = ifelse(t>max(auto_bounds, na.rm=T), NA, auto_boundsSeq),
+  smogPP_5HzBounded = ifelse(is.na(auto_boundsSeqBounded), NA, smogPP_5Hz),
+  smogPP_8HzBounded = ifelse(is.na(auto_boundsSeqBounded), NA, smogPP_8Hz),
+  smogPP_12HzBounded = ifelse(is.na(auto_boundsSeqBounded), NA, smogPP_12Hz),
+  smogPP_20HzBounded = ifelse(is.na(auto_boundsSeqBounded), NA, smogPP_20Hz)
   )
 #
 ## re-create the boundaries list
@@ -227,12 +225,10 @@ files <- files[!duplicated(files)==TRUE]
 ########### loop start ###########
 plyr::ldply(files, function(f){
 detect_sel_file <- f
-##################################
 
 #####################################
 ###### manual singles, no-loop ######
 # detect_sel_file <- files[4] # or: "filename"
-#####################################
 
 auto_boundsPlot <- dplyr::filter(droplevels(comp_df), file==detect_sel_file) 
 #
@@ -245,20 +241,21 @@ singleBounds <- ggplot(auto_boundsPlot, aes(x=t)) +
   {if(manual==TRUE) geom_vline(aes(xintercept=syll_bounds), linetype="dotted", color="gray", size=.5, alpha=.5)} +
   geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=0, yend=100), position = "dodge", color="red", size=1, alpha=.5, linetype = "solid", lineend = "round") +
 ##### Derivatives
-  geom_line(aes(y=smogPP_1stDer),color="black", alpha=.4, size=1) +
-  geom_line(aes(y=smogPP_2ndDer),color="gold", alpha=.8, size=1) +
-  geom_line(aes(y=smogPP_2ndDerDyn*10),color="green", alpha=.6, size=1) +
+  geom_line(aes(y=smogPP_1stDer*2),color="black", alpha=.4, size=1) +
+  geom_line(aes(y=smogPP_2ndDer*2),color="gold", alpha=.8, size=1) +
+  geom_line(aes(y=smogPP_2ndDerDyn*2),color="green", alpha=.6, size=1) +
 ##### annotations
   {if(manual==TRUE) geom_text(aes(x=syll_mid, y=110, label=as.character(syll_label), check_overlap=T), size=3, color="black", family= "Helvetica")} + 
   theme(plot.title = element_text(size = 8), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(singleBounds)
 ##--save?
-ggsave(singleBounds, file=paste0("plots/",detect_sel_file,"_autoBoundsPlot.pdf"),device=cairo_pdf)
+if(useManual==FALSE) ggsave(singleBounds, file=paste0("plots/",detect_sel_file,"_autoBounds_averageSyll",averageSyll,".pdf"),device=cairo_pdf)
+if(useManual==TRUE) ggsave(singleBounds, file=paste0("plots/",detect_sel_file,"_autoBounds_autoMan",autoMan,".pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
+# (comment out if running manual):
 })
-##################################
 
 ```
 
@@ -334,35 +331,24 @@ CoM <- function(df) {
 ## F0 time series variations for the f0Floor calculations (avoiding interpolated data points)
 comp_df <- mutate(
   group_by(comp_df, file),
-##  f0_smooth_stretch_interp_smooth_drop interpolation
   f0Floor4real = ifelse(
-  smogPP_20Hz < 0.1, NA, f0Post_dropInterp)
-  # f0Post_dropInterp = ifelse(
-  # is.na(f0_smooth) | smogPP_20Hz < 0.1, NA, f0Post)
-# ### stretched F0 time-series with "real' local minima (used to compute CoG)
-#   f0_realFloorStretch = ifelse(smogPP_20Hz > 0.1, f0Post, NA),
-#   f0_realFloorStretch = na.locf(f0_realFloorStretch, na.rm=F),
-#   f0_realFloorStretch = ifelse(
-#     (is.na(f0_realFloorStretch) & t<min(which(!is.na(f0_realFloorStretch)))),
-#     f0_realFloorStretch[min(which(!is.na(f0_realFloorStretch)))], f0_realFloorStretch)
+  is.na(smogPP_20HzBounded) | smogPP_20HzBounded < 0.1, NA, f0_smoorp)
   )
 
-# CoG uses the interpolated F0 curve ('f0Post') multiplied by a 0--1 scale of the corresponding periodic energy  ('smogPP_20Hz')
+# CoG uses the interpolated F0 curve ('f0_smoorp') multiplied by a 0--1 scale of the corresponding periodic energy  ('smogPP_20Hz')
 CoG <- function(df) {
   # set the floor of the F0 curve: the interval's minimum minus a fixed percentage of the overall range (.1--.25)
-  f0Floor <- ifelse(df$f0_speaker_range_median > 99, 
-                    min(df$f0Floor4real, na.rm=T) - .1 * df$f0_speaker_range_median, 
+  f0Floor <- ifelse(df$f0_speaker_range > 99, #f0_speaker_range_median
+                    min(df$f0Floor4real, na.rm=T) - .1 * df$f0_speaker_range, #f0_speaker_range_median 
                     min(df$f0Floor4real, na.rm=T) - .1 * 100)
-                    # min(df$f0_realFloorStretch, na.rm=T) - .1 * df$f0_speaker_range_median, 
-                    # min(df$f0_realFloorStretch, na.rm=T) - .1 * 100)
   ifelse(
     sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
-    round(sum((df$f0Post - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0Post - f0Floor) * df$smogPP_20Hz, na.rm=T),3))
+    round(sum((df$f0_smoorp - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_smoorp - f0Floor) * df$smogPP_20Hz, na.rm=T),3))
   }
 #
 # F0 and periodic energy values at centers
-f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0Post[df$t == round(df$CoM)])
-f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0Post[df$t == round(df$CoG)])
+f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0_smoorp[df$t == round(df$CoM)])
+f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0_smoorp[df$t == round(df$CoG)])
 PERatCoM <- function(df) ifelse(df$CoM==0, 0, df$smogPP_20Hz[df$t == round(df$CoM)])
 PERatCoG <- function(df) ifelse(df$CoG==0, 0, df$smogPP_20Hz[df$t == round(df$CoG)])
 #
@@ -428,26 +414,37 @@ comp_df <- mutate(
       (!is.na(auto_bounds) & !is.na(f0atCoM)), DeltaF0, NA)),
   ## '∆F0': stretch observations
   DeltaF0 = ifelse(
-    !is.na(mass), na.locf(DeltaF0, na.rm=F), NA),
+    !is.na(mass), zoo::na.locf(DeltaF0, na.rm=F), NA),
   ## normalize parameters 
-  DeltaF0_rel = round((DeltaF0 / f0_speaker_range_median) * 100, 3),
+  DeltaF0_rel = round((DeltaF0 / f0_speaker_range) * 100, 3),# f0_speaker_range_median
   sync_rel = round((synchrony / intervalDuration) * 100, 3),
-  mass_rel = round(mass / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 3),
+  # OLD
+  # mass_rel = round(mass / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 3),
+  # NEW
+  mass_rel = round(mass / (sum(smogPP_20HzBounded, na.rm=T) / length(levels(as.factor(CoM_corr)))), 3),
   intervalDuration_rel = ifelse(
     !is.na(intervalDuration), 
     round(intervalDuration / max(intervalDuration, na.rm=T), 3), NA),
   ## create plot-friendly data
   DeltaF0Label = ifelse(
-    round(DeltaF0)>0, paste0('+',round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)'), 
-    paste0(round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)')),
+    round(DeltaF0)>0, paste0('+',round(DeltaF0_rel),'% (',abs(round(DeltaF0)),'Hz)'), 
+    paste0(round(DeltaF0_rel),'% (',abs(round(DeltaF0)),'Hz)')),
   syncLabel = ifelse(
-    round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(abs(sync_rel)),'%)'), 
-    paste0(round(synchrony),' ms (',round(abs(sync_rel)),'%)')),
+    round(synchrony)>0, paste0('+',round(sync_rel),' % (',abs(round(synchrony)),'ms)'), 
+    paste0(round(sync_rel),' % (',abs(round(synchrony)),'ms)')),
+  
+  # DeltaF0Label = ifelse(
+  #   round(DeltaF0)>0, paste0('+',round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)'), 
+  #   paste0(round(DeltaF0),'Hz (',round(abs(DeltaF0_rel)),'%)')),
+  # syncLabel = ifelse(
+  #   round(synchrony)>0, paste0('+',round(synchrony),' ms (',round(abs(sync_rel)),'%)'), 
+  #   paste0(round(synchrony),' ms (',round(abs(sync_rel)),'%)')),
+  
   #####################################
   ############ speech-rate ############
   #####################################
   ## 'CoM': stretch observations
-  CoM_seq = na.locf(CoM_corr, na.rm=F),  
+  CoM_seq = zoo::na.locf(CoM_corr, na.rm=F),  
   ## 'CoM: calculate consecutive CoM diffs
   CoM_diff = ifelse(
     !is.na(CoM_corr), CoM_corr - lag(CoM_seq, 2), NA),
@@ -458,7 +455,7 @@ comp_df <- mutate(
   CoM_diff_rel = ifelse(
     t == min(CoM_corr, na.rm=T), intervalDuration_rel, CoM_diff_rel),
   ## CoM_diff_rel': stretch observations to keep values @ CoM
-  CoM_diff_rel = na.locf(CoM_diff_rel, na.rm=F),
+  CoM_diff_rel = zoo::na.locf(CoM_diff_rel, na.rm=F),
   CoM_diff_rel = ifelse(
     t==CoM & !is.na(CoM), CoM_diff_rel, NA),
   ## 'CoM_diff_rel': invert values (1--0)
@@ -475,22 +472,19 @@ comp_df <- mutate(
   ## 'CoM_diff_relInterpStretch': smooth and unstretch
   # CoM_diff_relSmoothInterp = filter(LowPass2Hz, CoM_diff_relInterpStretch),
   CoM_diff_relSmoothInterp = bwfilter(wave = CoM_diff_relInterpStretch, f = 1000, to = 5, n =2, output = "Sample"),
-  localSpeechRate = ifelse(
+  dynaSpeechRate = ifelse(
     !is.na(CoM_diff_relInterp), round(CoM_diff_relSmoothInterp, 4), NA)
   )
 
 ## interpolate labels from the TextGrid manual annotations
 if(length(comp_df$syll_mid) > 0) comp_df <- mutate(
   group_by(comp_df, file),
-  # syll_mid = na.locf(syll_mid, na.rm=F),
-  syll_label = na.locf(syll_label, na.rm=F)
+  syll_label = zoo::na.locf(syll_label, na.rm=F)
   )
 if(length(comp_df$word_label) > 0) comp_df <- mutate(
   group_by(comp_df, file),
-  # word_mid = na.locf(syll_mid, na.rm=F),
-  word_label = na.locf(word_label, na.rm=F)
+  word_label = zoo::na.locf(word_label, na.rm=F)
   )
-
 
 ```
 ## Plot periograms with computations overlaid
@@ -503,12 +497,10 @@ yScale <- c('tokenScale', 'speakerScale', 'dataScale')[1]
 ########### loop start ###########
 plyr::ldply(files, function(f){
 sel_file <- f
-##################################
 
 #####################################
 ###### manual singles, no-loop ######
 # sel_file <- files[3] # or: "filename"
-#####################################
 
 single_token <- dplyr::filter(comp_df, file==sel_file)
 
@@ -544,14 +536,14 @@ plot_comp <-
   ##### smooth
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
   ##### interpolated
-  # geom_point(aes(y=f0Post),color="red", alpha=.3, size=.3) +
-  # geom_point(aes(y=f0Post_dropInterp),color="purple", alpha=1, size=.3) +
+  # geom_point(aes(y=f0_smerp),color="red", alpha=.3, size=.3) +
+  # geom_point(aes(y=f0_smoorp),color="grey", alpha=0.3, size=.3) +
   ##### periogram (smogPP)
-  geom_line(aes(y=f0Post),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
+  geom_line(aes(y=f0_smoorp),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
 ####################### Periodic energy curve
   geom_line(aes(y=smogPP_20Hz*f0range+plotFloor),color="red", alpha=.75, size=.5) +
 ####################### Speech-rate curve
-  geom_line(aes(y=localSpeechRate*f0range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
+  geom_line(aes(y=dynaSpeechRate*f0range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
 ####################### boundaries
   {if(manual==TRUE) geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7)} +
   geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0max+plotUnits*9), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
@@ -596,8 +588,8 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_PERIOGRAM+(",yScale,").pdf"),d
 
 ##################################
 ############ loop end ############
+# (comment out if running manual):
 })
-##################################
 
 ```
 
@@ -605,13 +597,15 @@ ggsave(plot_comp, file=paste0("plots/",sel_file,"_PERIOGRAM+(",yScale,").pdf"),d
 
 ```{r minimize_comp_df}
 
-mini_comp_df <- droplevels(subset(comp_df, select = -c(plotFloorToken, plotFloorSpeaker, plotFloorData, intensityRel, postPP_rel, logPP_rel, smogPP_1stDer, smogPP_2ndDer, smogPP_2ndDerDyn, CoM_seq, CoM_diff, CoM_diff_rel, CoM_diff_relInv, CoM_diff_relInterp, CoM_diff_relInterpStretch, CoM_diff_relSmoothInterp)))
+mini_comp_df <- droplevels(subset(comp_df, select = -c(plotFloorToken, plotFloorSpeaker, plotFloorData, intensity_scaled, postPP_scaled, logPP_scaled, smogPP_1stDer, smogPP_2ndDer, smogPP_2ndDerDyn, CoM_seq, CoM_diff, CoM_diff_rel, CoM_diff_relInv, CoM_diff_relInterp, CoM_diff_relInterpStretch, CoM_diff_relSmoothInterp)))
 
 ```
 
 # Write comp_df table
 
 ```{r write_comp_df}
+
 ## Write the computation data file
 write.csv(mini_comp_df, "data_tables/comp_df.csv", row.names=FALSE)
+
 ```
