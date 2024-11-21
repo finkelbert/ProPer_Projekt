@@ -10,7 +10,7 @@ require(tidyverse)
 require(Cairo)
 require(zoo)
 require(seewave)
-# require(signal)
+require(imputeTS)
 
 ## Read the previous table: raw_df
 raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = TRUE)
@@ -44,7 +44,7 @@ files <- files[!duplicated(files)==TRUE]
 #
 ##    Adjust 'perFloor' to find the single most fitting value 
 # (you can choose multiple values for different speakers and/or tokens later):
-perFloor <- .01 # {.001 -- .05}; fitting values should be likely found between 0.1% (0.001) and 5% (0.05) 
+perFloor <- .01 # {.001 -- .1}; fitting values should be likely found between 0.1% (0.001) and 5% (0.05) 
 #
 ##    Anchor for relative measurements: 
 # Relative to the entire data ('data'), to same speaker ('speaker'), or to each token by itself ('token').
@@ -58,24 +58,33 @@ relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]}; change the number in [
 ```{r new_variables_main_df, warning=FALSE}
 #
 ## F0 interpolating, stretching and smoothing: mutate by token
+# main_df <- mutate(
+#   group_by(main_df, file),
+#   ##  f0_smooth_stretch ('f0_smootch')
+#   f0_smootch = ifelse(
+#     (is.na(f0_smooth) & t<min(which(!is.na(f0_smooth)))),
+#     f0_smooth[min(which(!is.na(f0_smooth)))], ifelse(
+#       (is.na(f0_smooth) & t>=max(which(!is.na(f0_smooth)))),
+#       f0_smooth[max(which(!is.na(f0_smooth)))], f0_smooth)),
+#   ##  f0_smooth_stretch_interp ('f0_smootchInterp')
+#   f0_smootchInterp = na.spline(f0_smootch, na.rm=F),
+#   ##  f0 post smooth_stretch_interp_smooth ('f0Post')
+#   f0Post = round(bwfilter(wave = f0_smootchInterp, f = 1000, to = 12, n = 1, output = "Sample"), 2),
+#   ##  f0 post without outer stretches ('f0Post_dropStretch')
+#   f0Post_dropStretch = ifelse(
+#   is.na(na.approx(f0_smooth, na.rm=F)), NA, f0Post),
+#   ##  f0 post without interpolation ('f0Post_dropInterp')
+#   f0Post_dropInterp = ifelse(
+#   is.na(f0_smooth), NA, f0Post)
+#   )
+
+## F0 interpolating: mutate by token
 main_df <- mutate(
   group_by(main_df, file),
-  ##  f0_smooth_stretch ('f0_smootch')
-  f0_smootch = ifelse(
-    (is.na(f0_smooth) & t<min(which(!is.na(f0_smooth)))),
-    f0_smooth[min(which(!is.na(f0_smooth)))], ifelse(
-      (is.na(f0_smooth) & t>=max(which(!is.na(f0_smooth)))),
-      f0_smooth[max(which(!is.na(f0_smooth)))], f0_smooth)),
-  ##  f0_smooth_stretch_interp ('f0_smootchInterp')
-  f0_smootchInterp = na.spline(f0_smootch, na.rm=F),
-  ##  f0 post smooth_stretch_interp_smooth ('f0Post')
-  f0Post = round(bwfilter(wave = f0_smootchInterp, f = 1000, to = 12, n = 1, output = "Sample"), 2),
-  ##  f0 post without outer stretches ('f0Post_dropStretch')
-  f0Post_dropStretch = ifelse(
-  is.na(na.approx(f0_smooth, na.rm=F)), NA, f0Post),
-  ##  f0 post without interpolation ('f0Post_dropInterp')
-  f0Post_dropInterp = ifelse(
-  is.na(f0_smooth), NA, f0Post)
+  ##  f0_smooth_interp ('f0_smerp')
+  # f0_smerpOLD = na.spline(f0_smooth, na.rm=F),
+  f0_smerp = na_interpolation(f0_smooth, option = "stine"),
+  f0_smoorp = round(bwfilter(wave = f0_smerp, f = 1000, to = 6, n = 1, output = "Sample"), 3),
   )
 ## mutate the entire data set
 main_df <- mutate(
@@ -86,8 +95,8 @@ main_df <- mutate(
   ## find values for entire data set
   max_data_per_power = max(periodicPower, na.rm=T),
   max_data_strength = max(periodicStrength, na.rm=T),
-  f0_data_min = round(min(f0Post_dropInterp, na.rm=T)),
-  f0_data_max = round(max(f0Post_dropInterp, na.rm=T)),
+  f0_data_min = round(min(f0_smooth, na.rm=T)),
+  f0_data_max = round(max(f0_smooth, na.rm=T)),
   f0_data_range = round(f0_data_max - f0_data_min)
   )
 ## find values for each token 
@@ -95,22 +104,22 @@ main_df <- mutate(
   group_by(main_df, file),
   max_token_per_power = max(periodicPower, na.rm=T),
   max_token_strength = max(periodicStrength, na.rm=T),
-  f0_token_min = round(min(f0Post_dropInterp, na.rm=T)),
-  f0_token_max = round(max(f0Post_dropInterp, na.rm=T)),
-  f0_token_median = round(median(f0Post_dropInterp, na.rm = T)),
-  f0_token_mean = round(mean(f0Post_dropInterp, na.rm = T)),
+  f0_token_min = round(min(f0_smooth, na.rm=T)),
+  f0_token_max = round(max(f0_smooth, na.rm=T)),
+  f0_token_median = round(median(f0_smooth, na.rm = T)),
+  f0_token_mean = round(mean(f0_smooth, na.rm = T)),
   f0_token_range = round(f0_token_max - f0_token_min)
   )
 ## find values for speaker-defined sets (if exist)
 if(length(main_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   max_speaker_per_power = max(periodicPower, na.rm=T),
   max_speaker_strength = max(periodicStrength, na.rm=T),
-  f0_speaker_min = round(min(f0Post_dropInterp, na.rm=T)),
-  f0_speaker_max = round(max(f0Post_dropInterp, na.rm=T)),
+  f0_speaker_min = round(min(f0_smooth, na.rm=T)),
+  f0_speaker_max = round(max(f0_smooth, na.rm=T)),
   f0_speaker_min_median = round(median(f0_token_min, na.rm=T)),
   f0_speaker_max_median = round(median(f0_token_max, na.rm=T)),
-  f0_speaker_median = round(median(f0Post_dropInterp, na.rm = T)),
-  f0_speaker_mean = round(mean(f0Post_dropInterp, na.rm = T)),
+  f0_speaker_median = round(median(f0_smooth, na.rm = T)),
+  f0_speaker_mean = round(mean(f0_smooth, na.rm = T)),
   f0_speaker_range = round(f0_speaker_max - f0_speaker_min),
   f0_speaker_range_median = round(f0_speaker_max_median - f0_speaker_min_median)
   )
@@ -143,39 +152,59 @@ main_df <- mutate(
   ## clean up negatives, infinites and NAs after log transform
   logPP = ifelse(logPP<0 | is.na(logPP) | is.infinite(logPP), 0, logPP),
   ## create relative scales (0--1) 
-  intensityRel = ifelse(
-    intensity<0, 0, round(intensity / max(intensity, na.rm=TRUE), 5)), 
-  totalPowerRel = ifelse(
-    totalPower<0, 0, round(totalPower / max(totalPower, na.rm=TRUE), 5)), 
-  postPP_rel = ifelse(
-    postPP<0, 0, round(postPP / max(postPP, na.rm=TRUE), 5)),
-  logPP_rel = round(logPP / max(logPP, na.rm=TRUE), 5)
+  # logPP_rel = round(logPP / max(logPP, na.rm=TRUE), 5),
+  logPP_scaled = round(scales::rescale(logPP, c(0,1)), 5),
+  # intensityRel = ifelse(
+  #   intensity<0, 0, round(intensity / max(intensity, na.rm=TRUE), 5)), 
+  intensity_scaled = ifelse(intensity<0, 0, intensity), 
+  intensity_scaled = round(scales::rescale(intensity, c(0,1)), 5), 
+  # totalPowerRel = ifelse(
+  #   totalPower<0, 0, round(totalPower / max(totalPower, na.rm=TRUE), 5)), 
+  totalPower_scaled = ifelse(totalPower<0, 0, totalPower), 
+  totalPower_scaled = round(scales::rescale(totalPower, c(0,1)), 5), 
+  # postPP_rel = ifelse(
+  #   postPP<0, 0, round(postPP / max(postPP, na.rm=TRUE), 5)),
+  postPP_scaled = ifelse(postPP<0, 0, postPP),
+  postPP_scaled = round(scales::rescale(postPP, c(0,1)), 5)
   )
+# 
+# # TEST
+# require(scales) # rescale and combine distmats
+# timeSeries <- scales::rescale(timeSeries, c(0,1))
+
 #
 ########## periodic energy smoothing (log+smooth = smog)
 main_df <- mutate(
   group_by(main_df, file),
-  ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
+  ### 20Hz low-pass filter (50ms intervals): "segmental smooth" ### DEFAULT!!!
   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2, output = "Sample"),
-  ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
+  smogPP_20Hz = ifelse(smogPP_20Hz < 0, 0, smogPP_20Hz),
+  smogPP_20Hz = round(scales::rescale(smogPP_20Hz, c(0,1)), 5),
+    ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 2, output = "Sample"),
+  smogPP_12Hz = ifelse(smogPP_12Hz < 0, 0, smogPP_12Hz),
+  smogPP_12Hz = round(scales::rescale(smogPP_12Hz, c(0,1)), 5),
   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 2, output = "Sample"),
+  smogPP_8Hz = ifelse(smogPP_8Hz < 0, 0, smogPP_8Hz),
+  smogPP_8Hz = round(scales::rescale(smogPP_8Hz, c(0,1)), 5),
   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
-  smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample")
+  smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample"),
+  smogPP_5Hz = ifelse(smogPP_5Hz < 0, 0, smogPP_5Hz),
+  smogPP_5Hz = round(scales::rescale(smogPP_5Hz, c(0,1)), 5)
   )
 ### tidy up: zero negatives and transform positives to a 0--1 scale 
-main_df <- mutate(
-  group_by(main_df, file),
-  smogPP_20Hz = ifelse(
-    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
-  smogPP_12Hz = ifelse(
-    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
-  smogPP_8Hz = ifelse(
-    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
-  smogPP_5Hz = ifelse(
-    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
-  )
+# main_df <- mutate(
+#   group_by(main_df, file),
+# smogPP_20HzOLD = ifelse(
+#   smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
+# smogPP_12HzOLD = ifelse(
+#   smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
+# smogPP_8HzOLD = ifelse(
+#   smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
+# smogPP_5HzOLD = ifelse(
+#   smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
+# )
 
 ```
 
@@ -192,12 +221,10 @@ yScale1 <- c('tokenScale', 'speakerScale', 'dataScale')[2]
 ########### loop start ###########
 plyr::ldply(files, function(f){
 sel_file1 <- f
-##################################
 
 #####################################
 ###### manual singles, no-loop ######
 # sel_file1 <- files[1] # or: "filename"
-#####################################
 
 single_token1 <- dplyr::filter(main_df, file==sel_file1)
 
@@ -221,16 +248,17 @@ periogram_single1 <-
   # geom_point(aes(y=f0_raw),color="green", alpha=.5, size=.5) +
 ## smoothed F0 (from pitch tier)
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=0.3, size=0.3) +
-  # geom_point(aes(y=f0_smootchInterp),color="yellow", alpha=0.3, size=0.3) +
-  # geom_point(aes(y=f0Post),color="red", alpha=0.3, size=0.3) +
+## interpolated F0 (for Periogram)
+  # geom_point(aes(y=f0_smerp),color="orange", alpha=0.3, size=.5) +
+  # geom_point(aes(y=f0_smoorp),color="grey", alpha=0.3, size=.3) +
 ## periogram (smogPP)
-  geom_line(aes(y=f0Post),color="magenta2", alpha=single_token1$smogPP_20Hz, size=single_token1$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_smoorp),color="magenta2", alpha=single_token1$smogPP_20Hz, size=single_token1$smogPP_20Hz*5) +
 #
 ########## Power/intensity
 ## intensity
-  # geom_line(aes(y=intensityRel*f0range1+plotFloor1),color="gold", alpha=.6, size=.5) +
+  # geom_line(aes(y=intensity_scaled*f0range1+plotFloor1),color="gold", alpha=.6, size=.5) +
 ## power
-  # geom_line(aes(y=totalPowerRel*f0range1+plotFloor1),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
+  # geom_line(aes(y=totalPower_scaled*f0range1+plotFloor1),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
 #  
 ########## Periodic fraction /similarity index (strength/HNR)
 ## raw strength (before "strengThresh")
@@ -239,19 +267,16 @@ periogram_single1 <-
   # geom_line(aes(y=periodicFraction*f0range1+plotFloor1), color="tomato", alpha=.7, size=.5, linetype="dotted") +
 #
 ########## Periodic power 'pp' (total power * periodic fraction)
-  geom_line(aes(y=postPP_rel*f0range1+plotFloor1),color="purple3", alpha=.5, size=.5, linetype="solid") +
+  geom_line(aes(y=postPP_scaled*f0range1+plotFloor1),color="purple3", alpha=.5, size=.5, linetype="solid") +
 #
 ########## Log periodic power 'logPP' (10*log10(PER/per_thresh))
-  # geom_line(aes(y=logPP_rel*f0range1+plotFloor1),color="seashell", alpha=.3, size=2, linetype="longdash") +
+  # geom_line(aes(y=logPP_scaled*f0range1+plotFloor1),color="seashell", alpha=.3, size=1, linetype="solid") +
 #
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
-  geom_line(aes(y=smogPP_20Hz*f0range1+plotFloor1),color="lightsteelblue", alpha=.5, size=.75) +
+  geom_line(aes(y=smogPP_20Hz*f0range1+plotFloor1),color="lightsteelblue", alpha=.5, size=.75) + #DEFAULT
   # geom_line(aes(y=smogPP_12Hz*f0range1+plotFloor1),color="lightyellow", alpha=.6, size=1) +
   # geom_line(aes(y=smogPP_8Hz*f0range1+plotFloor1),color="moccasin", alpha=.4, size=1.5) +
   # geom_line(aes(y=smogPP_5Hz*f0range1+plotFloor1),color="rosybrown1", alpha=.3, size=2) +
-  # geom_line(aes(y=smogPP_5Hz_2*f0range1+plotFloor1+5),color="yellow", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_5Hz_4*f0range1+plotFloor1+10),color="orange", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_5Hz_8*f0range1+plotFloor1+15),color="red", alpha=.6, size=1) +
 #  
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
@@ -269,30 +294,43 @@ ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_perTest(",perFloor,")_
 
 ##################################
 ############ loop end ############
+# (comment out if running manual):
 })
-##################################
 
 ```
 
 ## re-adjust the perFloor value for selected speakers 
 (this can be used also for specific tokens but in typical scenarios it should make more sense to have a single value for a given recording condition, i.e. for speakers, not for tokens) 
 
-```{r readjust_singles, warning=FALSE, echo=FALSE}
+```{r adjust_perFloors, warning=FALSE, echo=FALSE}
 
-#### change the perFloor of specific tokens
+################################################
+#### Change the perFloor of specific tokens
+################################################
+## (The following demonstration is based on the public example set:)
 main_df <- mutate(
   group_by(main_df, file),
   #
   perFloorStatus = ifelse(
     speaker == "AH",    # choose speaker to change
-    0.004,                # set the new perFloor value
+    0.0025,                # set the new perFloor value
+    perFloorStatus),       # repeat with different vlaue assignments if necessary...
+  #
+  perFloorStatus = ifelse(
+    speaker == "DM",    
+    0.005,                
     perFloorStatus),
-  #                      # repeat previous 4 lines for each unique perFloor value if necessary
+  #
   perFloorStatus = ifelse(
     speaker == "glenn",    
-    0.04,                
+    0.075,                
     perFloorStatus),
-  #                      
+  #
+  perFloorStatus = ifelse(
+    speaker == "joe",
+    0.1,
+    perFloorStatus),
+  #
   #### re-run 
   perFloor_indeed = ifelse(
     relTo=="token", round(max_token_per_power * perFloorStatus, 10), ifelse(
@@ -302,26 +340,43 @@ main_df <- mutate(
   logPP = 10*log10(postPP/perFloor_indeed),
   logPP = ifelse(logPP<0 | is.na(logPP), 0, logPP),
   ########## periodic energy smoothing (log+smooth = smog)
-  ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
+  ### 20Hz low-pass filter (50ms intervals): "segmental smooth" ### DEFAULT!!!
   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2, output = "Sample"),
-  ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
+  smogPP_20Hz = ifelse(smogPP_20Hz < 0, 0, smogPP_20Hz),
+  smogPP_20Hz = round(scales::rescale(smogPP_20Hz, c(0,1)), 5),
+    ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 2, output = "Sample"),
+  smogPP_12Hz = ifelse(smogPP_12Hz < 0, 0, smogPP_12Hz),
+  smogPP_12Hz = round(scales::rescale(smogPP_12Hz, c(0,1)), 5),
   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 2, output = "Sample"),
+  smogPP_8Hz = ifelse(smogPP_8Hz < 0, 0, smogPP_8Hz),
+  smogPP_8Hz = round(scales::rescale(smogPP_8Hz, c(0,1)), 5),
   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
-  smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample")
-  )
-### tidy up: zero negatives and transform positives to a 0--1 scale 
-main_df <- mutate(
-  group_by(main_df, file),
-  smogPP_20Hz = ifelse(
-    smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
-  smogPP_12Hz = ifelse(
-    smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
-  smogPP_8Hz = ifelse(
-    smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
-  smogPP_5Hz = ifelse(
-    smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
+  smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample"),
+  smogPP_5Hz = ifelse(smogPP_5Hz < 0, 0, smogPP_5Hz),
+  smogPP_5Hz = round(scales::rescale(smogPP_5Hz, c(0,1)), 5)
+#
+#   ### 20Hz low-pass filter (50ms intervals): "segmental smooth"
+#   smogPP_20Hz = bwfilter(wave = logPP, f = 1000, to = 20, n = 2, output = "Sample"),
+#   ### 12Hz low-pass filter (~83.3ms  intervals): "seg-syll smooth"
+#   smogPP_12Hz = bwfilter(wave = logPP, f = 1000, to = 12, n = 2, output = "Sample"),
+#   ### 8Hz low-pass filter (125ms  intervals): "syll-seg smooth"
+#   smogPP_8Hz = bwfilter(wave = logPP, f = 1000, to = 8, n = 2, output = "Sample"),
+#   ### 5Hz low-pass filter (200ms  intervals): "syllabic smooth"
+#   smogPP_5Hz = bwfilter(wave = logPP, f = 1000, to = 5, n = 2, output = "Sample")
+#   )
+# ### tidy up: zero negatives and transform positives to a 0--1 scale 
+# main_df <- mutate(
+#   group_by(main_df, file),
+#   smogPP_20Hz = ifelse(
+#     smogPP_20Hz < 0, 0, round(smogPP_20Hz / max(smogPP_20Hz,na.rm=T), 5)),
+#   smogPP_12Hz = ifelse(
+#     smogPP_12Hz < 0, 0, round(smogPP_12Hz / max(smogPP_12Hz, na.rm=T), 5)),
+#   smogPP_8Hz = ifelse(
+#     smogPP_8Hz < 0, 0, round(smogPP_8Hz / max(smogPP_8Hz, na.rm=T), 5)),
+#   smogPP_5Hz = ifelse(
+#     smogPP_5Hz < 0, 0, round(smogPP_5Hz / max(smogPP_5Hz, na.rm=T), 5))
   )
 
 ```
@@ -337,12 +392,10 @@ yScale2 <- c('tokenScale', 'speakerScale', 'dataScale')[2]
 ########### loop start ###########
 plyr::ldply(files, function(f){
 sel_file2 <- f
-##################################
 
 #####################################
 ###### manual singles, no-loop ######
 # sel_file2 <- files[3] # or: "filename"
-#####################################
 
 single_token2 <- dplyr::filter(main_df, file==sel_file2)
 
@@ -364,11 +417,9 @@ periogram_single2 <-
 ########## F0 curves
   # geom_point(aes(y=f0_smooth),color="blue3", alpha=0.3, size=0.3) +
 ## periogram (smogPP)
-  geom_line(aes(y=f0Post),color="magenta2", alpha=single_token2$smogPP_20Hz, size=single_token2$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_smoorp),color="magenta2", alpha=single_token2$smogPP_20Hz, size=single_token2$smogPP_20Hz*5) +
 ########## Periodic power 'pp' (total power * periodic fraction)
-  # geom_line(aes(y=postPP_rel*f0range2+plotFloor2),color="purple3", alpha=.5, size=.5, linetype="solid") +
-########## Log periodic power 'logPP' (10*log10(PER/per_thresh))
-  # geom_line(aes(y=logPP_rel*f0range2+plotFloor2),color="seashell", alpha=.3, size=2, linetype="longdash") +
+  # geom_line(aes(y=postPP_scaled*f0range2+plotFloor2),color="purple3", alpha=.5, size=.5, linetype="solid") +
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
   geom_line(aes(y=smogPP_20Hz*f0range2+plotFloor2),color="lightsteelblue", alpha=.5, size=.75) +
   # geom_line(aes(y=smogPP_12Hz*f0range2+plotFloor2),color="lightyellow", alpha=.6, size=1) +
@@ -390,8 +441,8 @@ ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_tok
 
 ##################################
 ############ loop end ############
+# (comment out if running manual):
 })
-##################################
 
 ```
 
@@ -400,13 +451,15 @@ ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_tok
 ```{r minimize_main_df}
 
 ## get rid of some variables
-mini_main_df <- droplevels(subset(main_df, select = -c(variable, intensity, f0_raw, periodicStrength, totalPower, periodicPower, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodicFraction, postPP, logPP, f0_smootch, f0_smootchInterp)))
+mini_main_df <- droplevels(subset(main_df, select = -c(variable, intensity, f0_raw, periodicStrength, totalPower, periodicPower, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodicFraction, postPP, logPP)))
 
 ```
 
 ## Write main_df table
 
 ```{r write_main_df}
+
 ## Write the main data file
 write.csv(mini_main_df, "data_tables/main_df.csv", row.names=FALSE)
+
 ```
