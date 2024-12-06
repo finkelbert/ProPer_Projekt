@@ -99,7 +99,6 @@ pitchObject_df <- plyr::ldply(files_pitchObject, function(f){
 ##### TextGrid
 # TextGrids are optional! They are useful for exposition and to improve the automatic detection. By default, TextGrids are expected with at least one interval tier demarcating syllabic boundaries
 #
-files_textGrid <- list.files(path="praat_data/textgrids/", pattern="*.TextGrid",full.names=T)
 # The following chunk takes syllabic intervals and labels from the "Syllable" tier
 if(length(files_textGrid)>0) textGridSyll_df <- plyr::ldply(files_textGrid, function(f){
   filename <- str_match(f,".*/([^/.]*)\\.[^/]*$")
