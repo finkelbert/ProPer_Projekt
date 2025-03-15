@@ -69,6 +69,9 @@ comp_df <- mutate(
   averageSyllStatus = averageSyll,
   # prepare empty columns
   auto_bounds = NA,
+#
+  DeltaF0_meanF0 = NA,
+#
   DeltaF0 = NA)
 comp_df <- mutate(
   group_by(comp_df, file),
@@ -345,6 +348,14 @@ CoG <- function(df) {
     round(sum((df$f0_smoorp - f0Floor) * df$t * df$smogPP_20Hz, na.rm=T) / sum((df$f0_smoorp - f0Floor) * df$smogPP_20Hz, na.rm=T),3))
   }
 #
+#### comeback of the weighted mean F0
+meanF0 <- function(df) {
+  ifelse(
+    sum(df$smogPP_20Hz, na.rm=T) < 5, 0, # minimum = 50 (ms) * 0.1 (smogPP) = 5
+    round(sum(df$smogPP_20Hz * df$f0_smoorp, na.rm=T) / sum(df$smogPP_20Hz, na.rm=T)))
+  }
+
+##  
 # F0 and periodic energy values at centers
 f0atCoM <- function(df) ifelse(df$CoM==0, 0, df$f0_smoorp[df$t == round(df$CoM)])
 f0atCoG <- function(df) ifelse(df$CoG==0, 0, df$f0_smoorp[df$t == round(df$CoG)])
@@ -361,6 +372,9 @@ comp_df$mass <- NULL
 comp_df$intervalDuration <- NULL
 comp_df$CoM <- NULL
 comp_df$CoG <- NULL
+#
+comp_df$meanF0 <- NULL
+#
 comp_df$f0atCoM <- NULL
 comp_df$f0atCoG <- NULL
 comp_df$PERatCoM <- NULL
@@ -373,6 +387,9 @@ intervals %>%
   markMap(intervalKalk(intervalDuration,"intervalDuration")) %>%
   markMap(intervalKalk(CoM,"CoM")) %>%
   markMap(intervalKalk(CoG,"CoG")) %>%
+#  
+  markMap(intervalKalk(meanF0,"meanF0")) %>%
+#
   markMap(intervalKalk(f0atCoM,"f0atCoM")) %>%
   markMap(intervalKalk(f0atCoG,"f0atCoG")) %>%
   markMap(intervalKalk(PERatCoM,"PERatCoM")) %>%
@@ -384,12 +401,15 @@ comp_df <- mutate(
   group_by(comp_df,file),
   CoM = ifelse(CoM==0, NA, CoM),
   CoG = ifelse(CoG==0, NA, CoG),
+#
+  meanF0 = ifelse(meanF0==0, NA, meanF0),
+#
   f0atCoM = ifelse(f0atCoM==0, NA, f0atCoM),
   f0atCoG = ifelse(f0atCoG==0, NA, f0atCoG),
   PERatCoM = ifelse(PERatCoM==0, NA, PERatCoM),
   PERatCoG = ifelse(PERatCoG==0, NA, PERatCoG))
 #
-# compute ∆F0
+# compute ∆F0 from f0atCoM
 f0atCoM_list <- comp_df$f0atCoM[boundetected]
 realFluct_i <- which(!is.na(f0atCoM_list))
 relevantFluct_i <- realFluct_i[-1]
@@ -398,7 +418,21 @@ DeltaF0List <- f0atCoM_list
 DeltaF0List[relevantFluct_i] <- DeltaListF0
 comp_df$DeltaF0[boundetected] <- DeltaF0List
 #
+# compute ∆F0 from meanF0
+meanF0_list <- comp_df$meanF0[boundetected]
+realFluct_i_meanF0 <- which(!is.na(meanF0_list))
+relevantFluct_i_meanF0 <- realFluct_i_meanF0[-1]
+DeltaListF0_meanF0 <- diff(meanF0_list[realFluct_i_meanF0])
+DeltaF0List_meanF0 <- meanF0_list
+DeltaF0List_meanF0[relevantFluct_i_meanF0] <- DeltaListF0_meanF0
+comp_df$DeltaF0_meanF0[boundetected] <- DeltaF0List_meanF0
+#
 ##### add, clean and scale parameters
+# comp_df <- mutate(
+#   group_by(comp_df, speaker),
+#   f0_speaker_mean = round(sum(smogPP_20HzBounded * f0_smoorp, na.rm=T) / sum(smogPP_20HzBounded, na.rm=T))
+#   )
+#
 comp_df <- mutate(
   group_by(comp_df, file),
   ## ignore weak intervals
@@ -411,11 +445,26 @@ comp_df <- mutate(
     min(which(!is.na(CoM)), na.rm = T) == t+1, f0atCoM - f0_speaker_median, 
     ifelse(
       (!is.na(auto_bounds) & !is.na(f0atCoM)), DeltaF0, NA)),
+#
+  # f0_token_mean = round(sum(smogPP_20HzBounded * f0_smoorp, na.rm=T) / sum(smogPP_20HzBounded, na.rm=T)),
+#  
+  DeltaF0_meanF0 = ifelse(
+    min(which(!is.na(CoM)), na.rm = T) == t+1, meanF0 - f0_speaker_median, # f0_token_mean / f0_speaker_mean
+    ifelse(
+      (!is.na(auto_bounds) & !is.na(meanF0)), DeltaF0_meanF0, NA)),
+#
   ## '∆F0': stretch observations
   DeltaF0 = ifelse(
     !is.na(mass), zoo::na.locf(DeltaF0, na.rm=F), NA),
+#
+  DeltaF0_meanF0 = ifelse(
+    !is.na(mass), zoo::na.locf(DeltaF0_meanF0, na.rm=F), NA),
+#
   ## normalize parameters 
   DeltaF0_rel = round((DeltaF0 / f0_speaker_range) * 100, 3),# f0_speaker_range_median
+#
+  DeltaF0_meanF0_rel = round((DeltaF0_meanF0 / f0_speaker_range) * 100, 3),# f0_speaker_range_median
+#
   sync_rel = round((synchrony / intervalDuration) * 100, 3),
   # OLD
   # mass_rel = round(mass / (sum(smogPP_20Hz, na.rm=T) / length(levels(as.factor(CoM_corr)))), 3),
@@ -428,9 +477,14 @@ comp_df <- mutate(
   DeltaF0Label = ifelse(
     round(DeltaF0)>0, paste0('+',round(DeltaF0_rel),'% (',abs(round(DeltaF0)),'Hz)'), 
     paste0(round(DeltaF0_rel),'% (',abs(round(DeltaF0)),'Hz)')),
+#
+  DeltaF0_meanF0Label = ifelse(
+    round(DeltaF0_meanF0)>0, paste0('+',round(DeltaF0_meanF0_rel),'% (',abs(round(DeltaF0_meanF0)),'Hz)'), 
+    paste0(round(DeltaF0_meanF0_rel),'% (',abs(round(DeltaF0_meanF0)),'Hz)')),
+#
   syncLabel = ifelse(
-    round(synchrony)>0, paste0('+',round(sync_rel),' % (',abs(round(synchrony)),'ms)'), 
-    paste0(round(sync_rel),' % (',abs(round(synchrony)),'ms)')),
+    round(synchrony)>0, paste0('+',round(sync_rel,1),'% (',abs(round(synchrony)),'ms)'), 
+    paste0(round(sync_rel,1),'% (',abs(round(synchrony)),'ms)')),
   #####################################
   ############ speech-rate ############
   #####################################
@@ -548,11 +602,14 @@ plot_comp <-
   ##### text
   {if(manual==TRUE) geom_text(aes(x=single_token$syll_mid, y=f0max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica")} +
   ##### ∆F0 / F0 @ CoM
-  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=2, family= "Helvetica") + 
+  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=1.5, family= "Helvetica") + 
+#  
+  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*6, label=DeltaF0_meanF0Label), check_overlap=T, color="brown", size=1.5, family= "Helvetica") + 
+#  
   ##### Synchrony
-  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="darkorchid", size=2, family= "Helvetica") +
+  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="darkorchid", size=1.5, family= "Helvetica") +
   ##### Mass
-  geom_text(aes(x=single_token$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=2, family= "Helvetica") +
+  geom_text(aes(x=single_token$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=1.5, family= "Helvetica") +
 ####################### legend
   ##### CoGs
   geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midHigh-plotUnits*3, yend=midHigh+plotUnits*3), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
