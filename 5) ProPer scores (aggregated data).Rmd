@@ -73,7 +73,7 @@ scores_df <- dplyr::filter(scores_df, syllCoMMap == t)
 ## reduce columns
 mini_scores_df <- droplevels(subset(scores_df, select = -c(t, syll_start, syll_mid, syll_end, syll_bounds, word_start, word_mid, word_end, word_bounds, perFloorStatus, relToStatus, f0_smooth, f0_smerp, f0_smoorp, f0_data_min, f0_data_max, f0_data_range, strengThresh_indeed, smogPP_20Hz, smogPP_12Hz, smogPP_8Hz, smogPP_5Hz, syll_boundsSeq, useManualStatus, autoManStatus, averageSyllStatus, auto_bounds, auto_boundsSeq, f0atCoG, f0Floor4real, PERatCoM, PERatCoG, CoM_corr, CoG_corr, CoMatCoM, syllCoMMap, syllCoMMap2, syllCoMflicts, totalPower_scaled, auto_boundsSeqBounded, smogPP_5HzBounded, smogPP_8HzBounded, smogPP_12HzBounded, smogPP_20HzBounded)))
 
-nano_scores_df <- droplevels(subset(mini_scores_df, select = -c(f0_speaker_min, f0_speaker_max, f0_speaker_median, f0_speaker_mean, f0_speaker_range, f0_speaker_min_median, f0_speaker_max_median, f0_speaker_range_median, f0_token_min, f0_token_max, f0_token_median, f0_token_mean, f0_token_range, CoM, CoG, intervalDuration_rel, DeltaF0Label, syncLabel, dynaSpeechRate)))
+nano_scores_df <- droplevels(subset(mini_scores_df, select = -c(f0_speaker_min, f0_speaker_max, f0_speaker_median, f0_speaker_range, f0_token_min, f0_token_max, f0_token_median, f0_token_range, CoM, CoG, intervalDuration_rel, DeltaF0Label, syncLabel, dynaSpeechRate)))#f0_speaker_mean, f0_token_mean, f0_speaker_min_median, f0_speaker_max_median, f0_speaker_range_median, 
 
 ```
 
