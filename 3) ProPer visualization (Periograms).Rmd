@@ -11,6 +11,7 @@ require(Cairo)
 require(zoo)
 require(seewave)
 require(imputeTS)
+require(RColorBrewer)
 
 ## Read the previous table: raw_df
 raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = TRUE)
@@ -44,12 +45,17 @@ files <- files[!duplicated(files)==TRUE]
 #
 ##    Adjust 'perFloor' to find the single most fitting value 
 # (you can choose multiple values for different speakers and/or tokens later):
-perFloor <- .01 # {.001 -- .1}; fitting values should be likely found between 0.1% (0.001) and 5% (0.05) 
+perFloor <- .01 # {.001 -- .1}; fitting values should be likely found between 0.1% and 10% (.001--.1, respectively) of the exponential scale
 #
-##    Anchor for relative measurements: 
-# Relative to the entire data ('data'), to same speaker ('speaker'), or to each token by itself ('token').
-# Preferably choose "speaker" "[2]" if applicable:
-relTo <- c("data", "speaker", "token")[2] # {[1] -- [3]}; change the number in [squared brackets].
+##    Anchor for relative measurements: {[1] -- [3]}
+# Relative to the entire data ('data' = [1]), to same speaker ('speaker' = [2]), or to each token by itself ('token' = [3]).
+# Preferably choose "speaker" "[2]" if applicable: 
+relTo <- c("data",      # [1]
+           "speaker",   # [2] -- default!
+           "token")[2]  # [3]
+#
+##    'strengThresh' is a bit like the voicing threshold in Praat, and typically doesn't need adjustments
+strengThresh <- 0.35 #{0.25 -- 0.5} 0.35 -- default
 #
 ```
 
@@ -86,7 +92,7 @@ main_df <- mutate(
   f0_token_min = round(min(f0_smooth, na.rm=T)),
   f0_token_max = round(max(f0_smooth, na.rm=T)),
   f0_token_median = round(median(f0_smooth, na.rm = T)),
-  f0_token_mean = round(mean(f0_smooth, na.rm = T)),
+  # f0_token_mean = round(mean(f0_smooth, na.rm = T)),
   f0_token_range = round(f0_token_max - f0_token_min)
   )
 ## find values for speaker-defined sets (if exist)
@@ -95,12 +101,12 @@ if(length(main_df$speaker)>0) main_df <- mutate(group_by(main_df, speaker),
   max_speaker_strength = max(periodicStrength, na.rm=T),
   f0_speaker_min = round(min(f0_smooth, na.rm=T)),
   f0_speaker_max = round(max(f0_smooth, na.rm=T)),
-  f0_speaker_min_median = round(median(f0_token_min, na.rm=T)),
-  f0_speaker_max_median = round(median(f0_token_max, na.rm=T)),
+  # f0_speaker_min_median = round(median(f0_token_min, na.rm=T)),
+  # f0_speaker_max_median = round(median(f0_token_max, na.rm=T)),
   f0_speaker_median = round(median(f0_smooth, na.rm = T)),
-  f0_speaker_mean = round(mean(f0_smooth, na.rm = T)),
+  # f0_speaker_mean = round(mean(f0_smooth, na.rm = T)),
   f0_speaker_range = round(f0_speaker_max - f0_speaker_min),
-  f0_speaker_range_median = round(f0_speaker_max_median - f0_speaker_min_median)
+  # f0_speaker_range_median = round(f0_speaker_max_median - f0_speaker_min_median)
   )
 ## mutate by token
 main_df <- mutate(
@@ -115,9 +121,9 @@ main_df <- mutate(
       relTo=="data", round(max_data_per_power * perFloor, 10), 
       round(max_speaker_per_power * perFloor, 10))),
   strengThresh_indeed = ifelse(
-    relTo=="token", round(max_token_strength * 0.25, 8), ifelse(
-      relTo=="data", round(max_data_strength * 0.25, 8),
-      round(max_speaker_strength * 0.25, 8))),
+    relTo=="token", round(max_token_strength * strengThresh, 8), ifelse(
+      relTo=="data", round(max_data_strength * strengThresh, 8),
+      round(max_speaker_strength * strengThresh, 8))),
   ## create new periodic power vector
   periodicFraction = ifelse(periodicStrength < strengThresh_indeed, 0, periodicStrength),
   # periodicFraction = ifelse(periodicStrength < 0.25, 0, periodicStrength),
@@ -174,10 +180,37 @@ main_df <- mutate(
 
 Use the comment in/out (#) to toggle visualization of different data components.
 
+```{r}
+# display.brewer.pal(4, "PuOr")
+# 
+# brewer.pal(4, "PuOr")[1]
+"#E66101"
+# brewer.pal(4, "PuOr")[2]
+"#FDB863"
+# brewer.pal(4, "PuOr")[3]
+"#B2ABD2"
+# brewer.pal(4, "PuOr")[4]
+"#5E3C99"
+
+```
+
 ```{r plot_singles, warning=FALSE, echo=FALSE}
 
-### chosse the f0 scale for the y-axis in the plots
-yScale1 <- c('tokenScale', 'speakerScale', 'dataScale')[2]
+### choose the f0 scale for the y-axis in the plots {[1]--[3]}
+yScale1 <- c('tokenScale',     # [1]
+             'speakerScale',   # [2] -- default
+             'dataScale')[2]   # [3]
+
+### choose the set of variables to plot {[1]--[6]}
+plot1 <- c('checkF0',             # [1]
+           'checkPeriodicPower',  # [2] 
+           'checkPerFloor',       # [3] -- important!
+           'checkStrengThresh',   # [4] 
+           'checkSmooth',         # [5] 
+           'Periogram')[3]        # [6] -- default
+  
+xStart1 <- 0 # 0 = minimum (i.e. inactive)
+xLength1 <- 0 # 0 = maximum (i.e. inactive)
 
 ##################################
 ########### loop start ###########
@@ -190,69 +223,81 @@ sel_file1 <- f
 
 single_token1 <- dplyr::filter(main_df, file==sel_file1)
 
+xEnd1 <- ifelse(xLength1==0, max(single_token1$t), xStart1 + xLength1)
+
 plotFloor1 <- ifelse(yScale1 == 'tokenScale', single_token1$plotFloorToken[1],
                      ifelse(yScale1 == 'speakerScale', single_token1$plotFloorSpeaker[1],
-                            ifelse(yScale1 == 'dataScale', single_token1$plotFloorData[1], -275)))
-plotUnits1 <- ifelse(yScale1 == 'tokenScale', round(single_token1$f0_token_range[1]/30),
-                     ifelse(yScale1 == 'speakerScale', round(single_token1$f0_speaker_range[1]/30),
-                            ifelse(yScale1 == 'dataScale', round(single_token1$f0_data_range[1]/30), 12)))
+                            ifelse(yScale1 == 'dataScale',
+                                   single_token1$plotFloorData[1], -275)))
+plotUnits1 <- ifelse(yScale1 == 'tokenScale',
+                     round(single_token1$f0_token_range[1]/30),
+                     ifelse(yScale1 == 'speakerScale',
+                            round(single_token1$f0_speaker_range[1]/30),
+                            ifelse(yScale1 == 'dataScale',
+                                   round(single_token1$f0_data_range[1]/30),
+                                   12)))
 f0range1 <- ifelse(yScale1 == 'tokenScale', single_token1$f0_token_range[1],
-                     ifelse(yScale1 == 'speakerScale', single_token1$f0_speaker_range[1],
-                            ifelse(yScale1 == 'dataScale', single_token1$f0_data_range[1], 350)))
+                   ifelse(yScale1 == 'speakerScale',
+                          single_token1$f0_speaker_range[1],
+                          ifelse(yScale1 == 'dataScale',
+                                 single_token1$f0_data_range[1], 350)))
 f0max1 <- ifelse(yScale1 == 'tokenScale', single_token1$f0_token_max[1],
-                     ifelse(yScale1 == 'speakerScale', single_token1$f0_speaker_max[1],
-                            ifelse(yScale1 == 'dataScale', single_token1$f0_data_max[1], 425)))
+                 ifelse(yScale1 == 'speakerScale',
+                        single_token1$f0_speaker_max[1],
+                        ifelse(yScale1 == 'dataScale',
+                               single_token1$f0_data_max[1], 425)))
 
 periogram_single1 <-
   ggplot(single_token1, aes(x=t)) +
 ########## F0 curves
 ## pre-smoothed F0 (from pitch object)
-  # geom_point(aes(y=f0_raw),color="green", alpha=.5, size=.5) +
+  {if(plot1=='checkF0') geom_point(aes(y=f0_raw),color=brewer.pal(4, "PuOr")[3], alpha=.8, size=.9)} +
 ## smoothed F0 (from pitch tier)
-  # geom_point(aes(y=f0_smooth),color="blue3", alpha=0.3, size=0.3) +
+  {if(plot1=='checkF0') geom_point(aes(y=f0_smooth),color=brewer.pal(4, "PuOr")[4], alpha=.8, size=1.5)} +
 ## interpolated F0 (for Periogram)
-  # geom_point(aes(y=f0_smerp),color="orange", alpha=0.3, size=.5) +
-  # geom_point(aes(y=f0_smoorp),color="grey", alpha=0.3, size=.3) +
+  {if(plot1=='checkF0') geom_point(aes(y=f0_smerp),color=brewer.pal(4, "PuOr")[3], alpha=.7, size=.5)} +
+  {if(plot1=='checkF0') geom_point(aes(y=f0_smoorp),color=brewer.pal(4, "PuOr")[4], alpha=.7, size=.5)} +
 ## periogram (smogPP)
-  geom_line(aes(y=f0_smoorp),color="magenta2", alpha=single_token1$smogPP_20Hz, size=single_token1$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_smoorp),color=brewer.pal(4, "PuOr")[4], alpha=lead(single_token1$smogPP_20Hz, xStart1), size=lead(single_token1$smogPP_20Hz*5, xStart1)) +
 #
 ########## Power/intensity
-## intensity
-  # geom_line(aes(y=intensity_scaled*f0range1+plotFloor1),color="gold", alpha=.6, size=.5) +
-## power
-  # geom_line(aes(y=totalPower_scaled*f0range1+plotFloor1),color="cornflowerblue", alpha=.5, size=.5, linetype="dashed") +
+## intensity (log-transformed)
+  {if(plot1=='checkPeriodicPower') geom_line(aes(y=intensity_scaled*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[3], alpha=.8, size=.5)} +
+## power (exponentiated)
+  {if(plot1=='checkPeriodicPower') geom_line(aes(y=totalPower_scaled*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[2], alpha=.8, size=2.5, linetype="solid")} +
 #  
 ########## Periodic fraction /similarity index (strength/HNR)
 ## raw strength (before "strengThresh")
-  # geom_line(aes(y=periodicStrength*f0range1+plotFloor1), color="green", alpha=.2, size=.75, linetype="twodash") +
+  {if(plot1=='checkStrengThresh') geom_line(aes(y=periodicStrength*f0range1+plotFloor1), color=brewer.pal(4, "PuOr")[2], alpha=.8, size=2.5, linetype="solid")} +
 ## processed strength  (after "strengThresh")
-  # geom_line(aes(y=periodicFraction*f0range1+plotFloor1), color="tomato", alpha=.7, size=.5, linetype="dotted") +
+  {if(plot1=='checkStrengThresh' | plot1=='checkPeriodicPower') geom_line(aes(y=periodicFraction*f0range1+plotFloor1), color=brewer.pal(4, "PuOr")[1], alpha=1, size=.75, linetype="solid")} +
 #
 ########## Periodic power 'pp' (total power * periodic fraction)
-  geom_line(aes(y=postPP_scaled*f0range1+plotFloor1),color="purple3", alpha=.5, size=.5, linetype="solid") +
+  {if(plot1=='checkPerFloor' | plot1=='checkPeriodicPower') geom_line(aes(y=postPP_scaled*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[4], alpha=1, size=1.5, linetype="solid")} +
 #
 ########## Log periodic power 'logPP' (10*log10(PER/per_thresh))
-  # geom_line(aes(y=logPP_scaled*f0range1+plotFloor1),color="seashell", alpha=.3, size=1, linetype="solid") +
+  {if(plot1=='checkPerFloor') geom_line(aes(y=logPP_scaled*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[1], alpha=.9, size=.75, linetype="solid")} +
 #
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
-  geom_line(aes(y=smogPP_20Hz*f0range1+plotFloor1),color="lightsteelblue", alpha=.5, size=.75) + #DEFAULT
-  # geom_line(aes(y=smogPP_12Hz*f0range1+plotFloor1),color="lightyellow", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_8Hz*f0range1+plotFloor1),color="moccasin", alpha=.4, size=1.5) +
-  # geom_line(aes(y=smogPP_5Hz*f0range1+plotFloor1),color="rosybrown1", alpha=.3, size=2) +
+  {if(plot1=='checkSmooth') geom_line(aes(y=smogPP_5Hz*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[2], alpha=.5, size=3)} +
+  {if(plot1=='checkSmooth') geom_line(aes(y=smogPP_8Hz*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[2], alpha=.9, size=2.5)} +
+  {if(plot1=='checkSmooth') geom_line(aes(y=smogPP_12Hz*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[1], alpha=.7, size=1.5)} +
+  {if(plot1=='checkSmooth' | plot1=='Periogram' | plot1=='checkF0') geom_line(aes(y=smogPP_20Hz*f0range1+plotFloor1),color=brewer.pal(4, "PuOr")[1], alpha=1, size=.75)} + #DEFAULT!
 #  
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  {if(length(single_token1$syll_bounds)>0) geom_vline(aes(xintercept=single_token1$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5)} +
+  {if(length(single_token1$syll_bounds)>0) geom_vline(aes(xintercept=single_token1$syll_bounds), linetype="dotted", color="black", size=.5, alpha=.5)} +
 ## annotations
-  {if(length(single_token1$syll_mid)>0) geom_text(aes(x=single_token1$syll_mid, y=f0max1+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica")} + 
+  {if(length(single_token1$syll_mid)>0) geom_text(aes(x=single_token1$syll_mid, y=f0max1+plotUnits1*2, label=as.character(syll_label), check_overlap=T), size=3, color="black", family= "Helvetica")} + 
 ## plot stuff
   ggtitle(paste0(sel_file1)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
   ylim(plotFloor1,f0max1+plotUnits1*2) +
-  theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
+  xlim(xStart1,xEnd1) +
+  theme(plot.title = element_text(colour = "black"), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_text(colour = "black"), axis.ticks = element_blank())
 print(periogram_single1)
 ##--save?
-ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_perTest(",perFloor,")_",yScale1,".pdf"),device=cairo_pdf)
+ggsave(periogram_single1,file=paste0("plots/",sel_file1,"_perFloor",single_token1$perFloorStatus[1],"_",plot1,"_",yScale1,"_xStart",xStart1,"_xLength",xLength1,".pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
@@ -285,7 +330,7 @@ main_df <- mutate(
   #
   perFloorStatus = ifelse(
     speaker == "glenn",    
-    0.05,                
+    0.075,                
     perFloorStatus),
   #
   perFloorStatus = ifelse(
@@ -326,8 +371,19 @@ main_df <- mutate(
 
 ```{r re-plot, warning=FALSE, echo=FALSE}
 
-### chosse the f0 scale for the y-axis in the plots
-yScale2 <- c('tokenScale', 'speakerScale', 'dataScale')[2]
+### choose the f0 scale for the y-axis in the plots {[1]--[3]}
+yScale2 <- c('tokenScale',     # [1]
+             'speakerScale',   # [2] -- default
+             'dataScale')[2]   # [3]
+
+### choose the set of variables to plot {[1]--[4]}
+plot2 <- c('checkF0',         # [1]
+           'checkPerFloor',   # [2]
+           'checkSmooth',     # [3]
+           'Periogram')[4]    # [4] -- default
+
+xStart2 <- 0 # 0 = minimum (i.e. inactive)
+xLength2 <- 0 # 0 = maximum (i.e. inactive)
 
 ##################################
 ########### loop start ###########
@@ -341,44 +397,58 @@ sel_file2 <- f
 single_token2 <- dplyr::filter(main_df, file==sel_file2)
 
 plotFloor2 <- ifelse(yScale2 == 'tokenScale', single_token2$plotFloorToken[1],
-                     ifelse(yScale2 == 'speakerScale', single_token2$plotFloorSpeaker[1],
-                            ifelse(yScale2 == 'dataScale', single_token2$plotFloorData[1], -275)))
-plotUnits2 <- ifelse(yScale2 == 'tokenScale', round(single_token2$f0_token_range[1]/30),
-                     ifelse(yScale2 == 'speakerScale', round(single_token2$f0_speaker_range[1]/30),
-                            ifelse(yScale2 == 'dataScale', round(single_token2$f0_data_range[1]/30), 12)))
+                     ifelse(yScale2 == 'speakerScale',
+                            single_token2$plotFloorSpeaker[1],
+                            ifelse(yScale2 == 'dataScale',
+                                   single_token2$plotFloorData[1], -275)))
+plotUnits2 <- ifelse(yScale2 == 'tokenScale',
+                     round(single_token2$f0_token_range[1]/30),
+                     ifelse(yScale2 == 'speakerScale',
+                            round(single_token2$f0_speaker_range[1]/30),
+                            ifelse(yScale2 == 'dataScale',
+                                   round(single_token2$f0_data_range[1]/30),
+                                   12)))
 f0range2 <- ifelse(yScale2 == 'tokenScale', single_token2$f0_token_range[1],
-                     ifelse(yScale2 == 'speakerScale', single_token2$f0_speaker_range[1],
-                            ifelse(yScale2 == 'dataScale', single_token2$f0_data_range[1], 350)))
+                   ifelse(yScale2 == 'speakerScale',
+                          single_token2$f0_speaker_range[1],
+                          ifelse(yScale2 == 'dataScale',
+                                 single_token2$f0_data_range[1], 350)))
 f0max2 <- ifelse(yScale2 == 'tokenScale', single_token2$f0_token_max[1],
-                     ifelse(yScale2 == 'speakerScale', single_token2$f0_speaker_max[1],
-                            ifelse(yScale2 == 'dataScale', single_token2$f0_data_max[1], 425)))
+                 ifelse(yScale2 == 'speakerScale',
+                        single_token2$f0_speaker_max[1],
+                        ifelse(yScale2 == 'dataScale',
+                               single_token2$f0_data_max[1], 425)))
+
+xEnd2 <- ifelse(xLength2==0, max(single_token2$t),xStart2 + xLength2)
 
 periogram_single2 <-
   ggplot(single_token2, aes(x=t)) +
 ########## F0 curves
-  # geom_point(aes(y=f0_smooth),color="blue3", alpha=0.3, size=0.3) +
+  {if(plot2=='checkF0') geom_point(aes(y=f0_smooth),color=brewer.pal(4, "PuOr")[4], alpha=.8, size=1.5)} +
 ## periogram (smogPP)
-  geom_line(aes(y=f0_smoorp),color="magenta2", alpha=single_token2$smogPP_20Hz, size=single_token2$smogPP_20Hz*5) +
+  geom_line(aes(y=f0_smoorp),color=brewer.pal(4, "PuOr")[4], alpha=lead(single_token2$smogPP_20Hz, xStart2), size=lead(single_token2$smogPP_20Hz*5, xStart2)) +
 ########## Periodic power 'pp' (total power * periodic fraction)
-  # geom_line(aes(y=postPP_scaled*f0range2+plotFloor2),color="purple3", alpha=.5, size=.5, linetype="solid") +
+  {if(plot2=='checkPerFloor') geom_line(aes(y=postPP_scaled*f0range2+plotFloor2),color=brewer.pal(4, "PuOr")[4], alpha=1, size=1.5, linetype="solid")} +
 ########## Smoothed logPP 'smogPP' (4 smoothing flavors: 5/ 8/ 12/ 20 Hz low-pass filter)
-  geom_line(aes(y=smogPP_20Hz*f0range2+plotFloor2),color="lightsteelblue", alpha=.5, size=.75) +
-  # geom_line(aes(y=smogPP_12Hz*f0range2+plotFloor2),color="lightyellow", alpha=.6, size=1) +
-  # geom_line(aes(y=smogPP_8Hz*f0range2+plotFloor2),color="moccasin", alpha=.4, size=1.5) +
-  geom_line(aes(y=smogPP_5Hz*f0range2+plotFloor2),color="rosybrown1", alpha=.3, size=2) +
+  {if(plot2=='checkSmooth') geom_line(aes(y=smogPP_5Hz*f0range2+plotFloor2),color=brewer.pal(4, "PuOr")[2], alpha=.5, size=3)} +
+  {if(plot2=='checkSmooth') geom_line(aes(y=smogPP_8Hz*f0range2+plotFloor2),color=brewer.pal(4, "PuOr")[2], alpha=.9, size=2.5)} +
+  {if(plot2=='checkSmooth') geom_line(aes(y=smogPP_12Hz*f0range2+plotFloor2),color=brewer.pal(4, "PuOr")[1], alpha=.7, size=1.5)} +
+  {if(plot2=='checkSmooth' | plot2=='checkPerFloor' | plot2=='Periogram' | plot2=='checkF0') geom_line(aes(y=smogPP_20Hz*f0range2+plotFloor2),color=brewer.pal(4, "PuOr")[1], alpha=1, size=.75)} + #DEFAULT!
+#  
 ########## TextGrids boundaries and annotations (comment out if not available)
 ## boundaries
-  {if(length(single_token2$syll_bounds)>0) geom_vline(aes(xintercept=single_token2$syll_bounds), linetype="dotted", color="white", size=.5, alpha=.5)} +
+  {if(length(single_token2$syll_bounds)>0) geom_vline(aes(xintercept=single_token2$syll_bounds), linetype="dotted", color="black", size=.5, alpha=.5)} +
 ## annotations
-  {if(length(single_token2$syll_mid)>0) geom_text(aes(x=single_token2$syll_mid, y=f0max2+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="white", family= "Helvetica")} + 
+  {if(length(single_token2$syll_mid)>0) geom_text(aes(x=single_token2$syll_mid, y=f0max2+plotUnits2*2, label=as.character(syll_label), check_overlap=T), size=3, color="black", family= "Helvetica")} + 
 ## plot stuff
   ggtitle(paste0(sel_file2)) +  
   xlab("Time (ms)") + ylab("F0 (Hz)") +
   ylim(plotFloor2,f0max2+plotUnits2*2) +
-  theme(plot.title = element_text(colour = "gray"), panel.background = element_blank(), plot.background = element_rect(fill = "black"), panel.grid = element_blank(), axis.title = element_text(colour = "gray"), axis.ticks = element_blank())
+  xlim(xStart2,xEnd2) +
+  theme(plot.title = element_text(colour = "black"), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_text(colour = "black"), axis.ticks = element_blank())
 print(periogram_single2)
 ##--save?
-ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_token2$perFloorStatus[1],")_",yScale2,".pdf"),device=cairo_pdf)
+ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_perFloor",single_token2$perFloorStatus[1],"_",plot2,"_",yScale2,"_xStart",xStart2,"_xLength",xLength2,".pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
@@ -392,7 +462,7 @@ ggsave(periogram_single2,file=paste0("plots/",sel_file2,"_PERIOGRAM(",single_tok
 ```{r minimize_main_df}
 
 ## get rid of some variables
-mini_main_df <- droplevels(subset(main_df, select = -c(variable, intensity, f0_raw, periodicStrength, totalPower, periodicPower, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodicFraction, postPP, logPP)))
+mini_main_df <- droplevels(subset(main_df, select = -c(intensity, f0_raw, periodicStrength, totalPower, periodicPower, max_data_per_power, max_data_strength, max_speaker_per_power, max_speaker_strength, max_token_per_power, max_token_strength, perFloor_indeed, periodicFraction, postPP, logPP)))
 
 ```
 
