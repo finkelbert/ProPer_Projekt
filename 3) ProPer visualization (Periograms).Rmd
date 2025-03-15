@@ -181,6 +181,9 @@ main_df <- mutate(
 Use the comment in/out (#) to toggle visualization of different data components.
 
 ```{r}
+
+# The following are the 4 colors of a diverging color scheme, which is (i) colorblind safe; (ii) print friendlyl; and (iii) photocopy safe. This is the "4-class PuOr" from ColorBrewer2.0 (https://colorbrewer2.org/#type=diverging&scheme=PuOr&n=4). See below for the relevant package (RColorBrewer) calls.
+
 # display.brewer.pal(4, "PuOr")
 # 
 # brewer.pal(4, "PuOr")[1]
