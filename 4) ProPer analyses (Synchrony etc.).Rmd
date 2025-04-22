@@ -10,6 +10,7 @@ require(tidyverse)
 require(seewave)
 require(Cairo)
 require(zoo)
+require(RColorBrewer)
 
 ## Read the previous table: main_df
 main_df <- read.csv("data_tables/main_df.csv") %>% distinct(file, t, .keep_all = TRUE)
@@ -237,15 +238,15 @@ auto_boundsPlot <- dplyr::filter(droplevels(comp_df), file==detect_sel_file)
 # plot derivatives to adjust automatic detector
 singleBounds <- ggplot(auto_boundsPlot, aes(x=t)) +
 ##### Periodic energy (smogPP_XXHz)
-  geom_line(aes(y=smogPP_20Hz*100), color="red", alpha=.4, size=1.5) +
+  geom_line(aes(y=smogPP_20Hz*100), color=brewer.pal(4, "PuOr")[1], alpha=.9, size=1.5) +
 #### boundaries
   geom_hline(yintercept = 0, size=.2, alpha=.5) +
-  {if(manual==TRUE) geom_vline(aes(xintercept=syll_bounds), linetype="dotted", color="gray", size=.5, alpha=.5)} +
-  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=0, yend=100), position = "dodge", color="red", size=1, alpha=.5, linetype = "solid", lineend = "round") +
+  {if(manual==TRUE) geom_vline(aes(xintercept=syll_bounds), linetype="dotted", color="gray", size=.5, alpha=.8)} +
+  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=0, yend=100), position = "dodge", color=brewer.pal(4, "PuOr")[1], size=1, alpha=.6, linetype = "solid", lineend = "round") +
 ##### Derivatives
-  geom_line(aes(y=smogPP_1stDer*2),color="black", alpha=.4, size=1) +
-  geom_line(aes(y=smogPP_2ndDer*2),color="gold", alpha=.8, size=1) +
-  geom_line(aes(y=smogPP_2ndDerDyn*2),color="green", alpha=.6, size=1) +
+  geom_line(aes(y=smogPP_1stDer*2),color=brewer.pal(4, "PuOr")[2], alpha=.8, size=1) +
+  geom_line(aes(y=smogPP_2ndDer*2),color=brewer.pal(4, "PuOr")[3], alpha=.8, size=1) +
+  geom_line(aes(y=smogPP_2ndDerDyn*2),color=brewer.pal(4, "PuOr")[4], alpha=.8, size=1) +
 ##### annotations
   {if(manual==TRUE) geom_text(aes(x=syll_mid, y=110, label=as.character(syll_label), check_overlap=T), size=3, color="black", family= "Helvetica")} + 
   theme(plot.title = element_text(size = 8), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
@@ -536,7 +537,13 @@ if(length(comp_df$word_label) > 0) comp_df <- mutate(
 
 ```{r plot, warning=FALSE}
 
-yScale <- c('tokenScale', 'speakerScale', 'dataScale')[1]
+### choose the f0 scale for the y-axis in the plots {[1]--[3]}
+yScale3 <- c('tokenScale',     # [1]
+             'speakerScale',   # [2] -- default
+             'dataScale')[2]   # [3]
+
+xStart3 <- 0 # 0 = minimum (i.e. inactive)
+xLength3 <- 0 # 0 = maximum (i.e. inactive)
 
 ##################################
 ########### loop start ###########
@@ -547,92 +554,89 @@ sel_file <- f
 ###### manual singles, no-loop ######
 # sel_file <- files[3] # or: "filename"
 
-single_token <- dplyr::filter(comp_df, file==sel_file)
+single_token3 <- dplyr::filter(comp_df, file==sel_file)
 
-plotFloor <- ifelse(yScale == 'tokenScale', single_token$plotFloorToken[1],
-                     ifelse(yScale == 'speakerScale', single_token$plotFloorSpeaker[1],
-                            ifelse(yScale == 'dataScale', single_token$plotFloorData[1], -275)))
-plotUnits <- ifelse(yScale == 'tokenScale', round(single_token$f0_token_range[1]/30),
-                     ifelse(yScale == 'speakerScale', round(single_token$f0_speaker_range[1]/30),
-                            ifelse(yScale == 'dataScale', round(single_token$f0_data_range[1]/30), 12)))
-f0range <- ifelse(yScale == 'tokenScale', single_token$f0_token_range[1],
-                     ifelse(yScale == 'speakerScale', single_token$f0_speaker_range[1],
-                            ifelse(yScale == 'dataScale', single_token$f0_data_range[1], 350)))
-f0max <- ifelse(yScale == 'tokenScale', single_token$f0_token_max[1],
-                     ifelse(yScale == 'speakerScale', single_token$f0_speaker_max[1],
-                            ifelse(yScale == 'dataScale', single_token$f0_data_max[1], 425)))
-midLow <- ifelse(yScale == 'tokenScale', round(single_token$f0_token_min[1]-single_token$f0_token_range[1]/2),
-                     ifelse(yScale == 'speakerScale', round(single_token$f0_speaker_min[1]-single_token$f0_speaker_range[1]/2),
-                            ifelse(yScale == 'dataScale', round(single_token$f0_data_min[1]-single_token$f0_data_range[1]/2), -100)))
-midHigh <- ifelse(yScale == 'tokenScale', round(single_token$f0_token_max[1]-single_token$f0_token_range[1]/2),
-                     ifelse(yScale == 'speakerScale', round(single_token$f0_speaker_max[1]-single_token$f0_speaker_range[1]/2),
-                            ifelse(yScale == 'dataScale', round(single_token$f0_data_max[1]-single_token$f0_data_range[1]/2), 250)))
+xEnd3 <- ifelse(xLength3==0, max(single_token3$t), xStart3 + xLength3)
+
+plotFloor <- ifelse(yScale3 == 'tokenScale', single_token3$plotFloorToken[1],
+                     ifelse(yScale3 == 'speakerScale', single_token3$plotFloorSpeaker[1],
+                            ifelse(yScale3 == 'dataScale', single_token3$plotFloorData[1], -275)))
+plotUnits <- ifelse(yScale3 == 'tokenScale', round(single_token3$f0_token_range[1]/30),
+                     ifelse(yScale3 == 'speakerScale', round(single_token3$f0_speaker_range[1]/30),
+                            ifelse(yScale3 == 'dataScale', round(single_token3$f0_data_range[1]/30), 12)))
+f0range <- ifelse(yScale3 == 'tokenScale', single_token3$f0_token_range[1],
+                     ifelse(yScale3 == 'speakerScale', single_token3$f0_speaker_range[1],
+                            ifelse(yScale3 == 'dataScale', single_token3$f0_data_range[1], 350)))
+f0max <- ifelse(yScale3 == 'tokenScale', single_token3$f0_token_max[1],
+                     ifelse(yScale3 == 'speakerScale', single_token3$f0_speaker_max[1],
+                            ifelse(yScale3 == 'dataScale', single_token3$f0_data_max[1], 425)))
+midLow <- ifelse(yScale3 == 'tokenScale', round(single_token3$f0_token_min[1]-single_token3$f0_token_range[1]/2),
+                     ifelse(yScale3 == 'speakerScale', round(single_token3$f0_speaker_min[1]-single_token3$f0_speaker_range[1]/2),
+                            ifelse(yScale3 == 'dataScale', round(single_token3$f0_data_min[1]-single_token3$f0_data_range[1]/2), -100)))
+midHigh <- ifelse(yScale3 == 'tokenScale', round(single_token3$f0_token_max[1]-single_token3$f0_token_range[1]/2),
+                     ifelse(yScale3 == 'speakerScale', round(single_token3$f0_speaker_max[1]-single_token3$f0_speaker_range[1]/2),
+                            ifelse(yScale3 == 'dataScale', round(single_token3$f0_data_max[1]-single_token3$f0_data_range[1]/2), 250)))
 
 maxBounds <- ifelse(manual==TRUE, 
-                    max(single_token$auto_bounds,single_token$syll_bounds,na.rm = T), 
-                    max(single_token$auto_bounds,na.rm = T))
+                    max(single_token3$auto_bounds,single_token3$syll_bounds,na.rm = T), 
+                    max(single_token3$auto_bounds,na.rm = T))
 minBounds <- ifelse(manual==TRUE,
-                    min(single_token$auto_bounds,single_token$syll_bounds,na.rm = T),
-                    min(single_token$auto_bounds,na.rm = T))
+                    min(single_token3$auto_bounds,single_token3$syll_bounds,na.rm = T),
+                    min(single_token3$auto_bounds,na.rm = T))
 
 plot_comp <-
-  ggplot(single_token, aes(x=t)) +
+  ggplot(single_token3, aes(x=t)) +
 ####################### F0 curves
-  ##### smooth
-  # geom_point(aes(y=f0_smooth),color="blue3", alpha=.3, size=.3) +
-  ##### interpolated
-  # geom_point(aes(y=f0_smerp),color="red", alpha=.3, size=.3) +
-  # geom_point(aes(y=f0_smoorp),color="grey", alpha=0.3, size=.3) +
   ##### periogram (smogPP)
-  geom_line(aes(y=f0_smoorp),color="blue", alpha=single_token$smogPP_20Hz, size=single_token$smogPP_20Hz*3.5) +
+  geom_line(aes(y=f0_smoorp),color=brewer.pal(4, "PuOr")[4], alpha=lead(single_token3$smogPP_20Hz, xStart3), size=lead(single_token3$smogPP_20Hz*3.5, xStart3)) +
 ####################### Periodic energy curve
-  geom_line(aes(y=smogPP_20Hz*f0range+plotFloor),color="red", alpha=.75, size=.5) +
+  geom_line(aes(y=smogPP_20Hz*f0range+plotFloor),color=brewer.pal(4, "PuOr")[1], alpha=1, size=.5) +  
 ####################### Speech-rate curve
-  geom_line(aes(y=dynaSpeechRate*f0range+plotFloor),color="springgreen4", alpha=.75, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
+  geom_line(aes(y=dynaSpeechRate*f0range+plotFloor),color="black", alpha=.25, size=2.5, linetype="solid", linejoin = "round")+#, lineend = "butt", linejoin = "round") +
 ####################### boundaries
   {if(manual==TRUE) geom_segment(aes(x=syll_bounds, xend=syll_bounds, y=plotFloor, yend=f0max+plotUnits*9), linetype="dotted", color="black", size=.5, alpha=.7)} +
-  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0max+plotUnits*9), position = "dodge", color="red", size=.5, alpha=.5, linetype = "solid", lineend = "round") +
+  geom_segment(aes(x=auto_bounds, xend=auto_bounds, y=plotFloor, yend=f0max+plotUnits*9), position = "dodge", color=brewer.pal(4, "PuOr")[1], size=.5, alpha=.5, linetype = "solid", lineend = "round") +
 ####################### landmarks 
   ##### CoMs
-  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=plotFloor, yend=PERatCoM*f0range+plotFloor), position = "dodge", color="red", size=.5, alpha=.5, linetype = "longdash", lineend = "round") +
-  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=f0atCoM+plotUnits*3, yend=f0atCoM-plotUnits*3), position = "dodge", color="red", size=.3, alpha=.9, linetype = "longdash", lineend = "round") +
+  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=plotFloor, yend=PERatCoM*f0range+plotFloor), position = "dodge", color=brewer.pal(4, "PuOr")[1], size=.5, alpha=.9, linetype = "longdash", lineend = "round") +
+  geom_segment(aes(x=CoM_corr, xend=CoM_corr, y=f0atCoM+plotUnits*3, yend=f0atCoM-plotUnits*3), position = "dodge", color=brewer.pal(4, "PuOr")[1], size=.3, alpha=.9, linetype = "longdash", lineend = "round") +
   ##### CoGs
-  geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG+plotUnits*3, yend=f0atCoG-plotUnits*3), position = "dodge", color="blue", size=.3, alpha=.9, linetype = "solid", lineend = "round") +
+  geom_segment(aes(x=CoG_corr, xend=CoG_corr, y=f0atCoG+plotUnits*3, yend=f0atCoG-plotUnits*3), position = "dodge", color=brewer.pal(4, "PuOr")[4], size=.3, alpha=.9, linetype = "solid", lineend = "round") +
 ####################### annotations
   ##### text
-  {if(manual==TRUE) geom_text(aes(x=single_token$syll_mid, y=f0max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica")} +
+  {if(manual==TRUE) geom_text(aes(x=single_token3$syll_mid, y=f0max+plotUnits*8, label=syll_label, check_overlap=T), color="black", size=3, family= "Helvetica")} +
   ##### ∆F0 / F0 @ CoM
-  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color="blue", size=1.5, family= "Helvetica") + 
+  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color=brewer.pal(4, "PuOr")[4], size=1.5, family= "Helvetica") + 
 #  
-  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*6, label=DeltaF0_meanF0Label), check_overlap=T, color="brown", size=1.5, family= "Helvetica") + 
+  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*6, label=DeltaF0_meanF0Label), check_overlap=T, color="gold", size=1.5, family= "Helvetica") +
 #  
   ##### Synchrony
-  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color="darkorchid", size=1.5, family= "Helvetica") +
+  geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color=brewer.pal(4, "PuOr")[3], size=1.5, family= "Helvetica") +
   ##### Mass
-  geom_text(aes(x=single_token$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color="red", size=1.5, family= "Helvetica") +
+  geom_text(aes(x=single_token3$CoM, y=plotFloor-plotUnits, label=mass_rel), check_overlap=T, color=brewer.pal(4, "PuOr")[1], size=1.5, family= "Helvetica") +
 ####################### legend
   ##### CoGs
-  geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midHigh-plotUnits*3, yend=midHigh+plotUnits*3), color="blue", size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
-  geom_text(aes(x=minBounds-30, y=midHigh), label="CoG", color="blue", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midHigh-plotUnits*3, yend=midHigh+plotUnits*3), color=brewer.pal(4, "PuOr")[4], size=.3, alpha=.8, linetype = "solid", lineend = "round", position = "dodge") +
+  geom_text(aes(x=minBounds-30, y=midHigh), label="CoG", color=brewer.pal(4, "PuOr")[4], alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   ##### CoMs
-  geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midLow+plotUnits*3, yend=midLow-plotUnits*3), color="red", size=.3, alpha=.8, linetype = "longdash", lineend = "round", position = "dodge") +
-  geom_text(aes(x=minBounds-30, y=midLow), label="CoM", color="red", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
+  geom_segment(aes(x=minBounds-20, xend=minBounds-20, y=midLow+plotUnits*3, yend=midLow-plotUnits*3), color=brewer.pal(4, "PuOr")[1], size=.3, alpha=.8, linetype = "longdash", lineend = "round", position = "dodge") +
+  geom_text(aes(x=minBounds-30, y=midLow), label="CoM", color=brewer.pal(4, "PuOr")[1], alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="right") +
   ##### ∆F0 / F0 @ CoM
-  geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*4), label="∆F0", color="blue", alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
-  geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*2), label="low < 0 < high", color="blue", alpha=1, size=2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*4), label="∆F0", color=brewer.pal(4, "PuOr")[4], alpha=1, size=2.5, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh+plotUnits*2), label="low < 0 < high", color=brewer.pal(4, "PuOr")[4], alpha=1, size=2, family = "Helvetica", check_overlap=T, na.rm = T, hjust="left") +
   ##### Synchrony
-  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*2), label="Synchrony", check_overlap=T, color="darkorchid", size=2.5, family= "Helvetica", hjust="left") +
-  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*4), label="fall < 0 < rise", check_overlap=T, color="darkorchid", size=2, family= "Helvetica", hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*2), label="Synchrony", check_overlap=T, color=brewer.pal(4, "PuOr")[3], size=2.5, family= "Helvetica", hjust="left") +
+  geom_text(aes(x=maxBounds+10, y=midHigh-plotUnits*4), label="fall < 0 < rise", check_overlap=T, color=brewer.pal(4, "PuOr")[3], size=2, family= "Helvetica", hjust="left") +
   ##### MAss
-  geom_text(aes(x=maxBounds+10, y=midLow+plotUnits), label="Mass", check_overlap=T, color="red", size=2.5, family= "Helvetica", hjust="left") + 
-  geom_text(aes(x=maxBounds+10, y=midLow-plotUnits, label="weak < 1 < strong"), check_overlap=T, color="red", size=2, family= "Helvetica", hjust="left") + 
+  geom_text(aes(x=maxBounds+10, y=midLow+plotUnits), label="Mass", check_overlap=T, color=brewer.pal(4, "PuOr")[1], size=2.5, family= "Helvetica", hjust="left") + 
+  geom_text(aes(x=maxBounds+10, y=midLow-plotUnits, label="weak < 1 < strong"), check_overlap=T, color=brewer.pal(4, "PuOr")[1], size=2, family= "Helvetica", hjust="left") +
 ####################### plot stuff
-  # xlim(minBounds-100, max(single_token$t)) +
   ylim(plotFloor-plotUnits, f0max+plotUnits*9) +
+  xlim(xStart3,xEnd3) +
   theme(plot.title = element_blank(), panel.background = element_blank(), plot.background = element_rect(fill = "white"), panel.grid = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), axis.ticks = element_blank(), strip.text = element_text(size = 8)) 
 print(plot_comp)
 ##--save?
-ggsave(plot_comp, file=paste0("plots/",sel_file,"_PERIOGRAM+(",yScale,").pdf"),device=cairo_pdf)
+ggsave(plot_comp, file=paste0("plots/",sel_file,"_PERIOGRAM+(",yScale3,").pdf"),device=cairo_pdf)
 
 ##################################
 ############ loop end ############
