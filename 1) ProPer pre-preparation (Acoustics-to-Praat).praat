@@ -60,7 +60,13 @@ for i from 1 to number_of_files
 		selectObject: "Intensity 'name_prefix$'"
 		Remove
 
-## create pitch object and tier (manually inspect files if selected)
+## create pitch object (to extract the periodic data)
+	selectObject: "Sound 'name_prefix$'"
+		To Pitch (raw autocorrelation): 0.001, 40, 800, 15, "yes", 0.03, 0.2, 0.02, 0.5, 0.14
+		Save as short text file: "'OutDirPitchObject$''name_prefix$'.Pitch"	
+		Remove
+
+## create pitch tier (manually inspect files if selected)
 if inspect = 1
 	selectObject: "Sound 'name_prefix$'"
 		View & Edit
@@ -71,7 +77,6 @@ elsif inspect = 0
 	selectObject: "Sound 'name_prefix$'"
 		To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
 endif
-		Save as short text file: "'OutDirPitchObject$''name_prefix$'.Pitch"	
 		Smooth: smooth
 		Down to PitchTier
 		Save as short text file: "'OutDirPitchTier$''name_prefix$'.PitchTier"
