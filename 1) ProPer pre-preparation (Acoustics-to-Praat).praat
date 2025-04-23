@@ -85,7 +85,7 @@ endif
 
 for i from 1 to number_of_files
     counter = counter + 1
-    selectObject: "Strings soundFileObj"
+    selectObject: fileList
     current_file$ = Get string: i
     name_prefix$ = current_file$ - ".wav"
 
@@ -144,7 +144,7 @@ for i from 1 to number_of_files
 
     ## finish and clear  
     select all
-    minusObject: "Strings soundFileObj", log
+    minusObject: fileList, log
     Remove
 endfor
 
