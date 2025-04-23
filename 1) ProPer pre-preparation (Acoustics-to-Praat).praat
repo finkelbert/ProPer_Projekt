@@ -61,7 +61,7 @@ fileList = Create Strings as file list: "soundFileObj",  "'InDirAudio$'*.wav"
 total_number_of_files = Get number of strings
 number_of_files = total_number_of_files
 
-if position = total_number_of_files
+if position = total_number_of_files + 1
     beginPause: ""
         comment: "It seems that you have already inspected all files."
         comment: "Do you want to inspect everything again?"
@@ -114,7 +114,15 @@ for i from 1 to number_of_files
         if counter == total_number_of_files
             beginPause: ""
                 comment: "File " + string$ (counter) + " out of " + string$ (total_number_of_files) + " (" + percent$ + "% of files inspected)."
-            clicked = endPause: "Conclude", 1, 0
+            clicked = endPause: "Stop here", "Conclude", 2, 1
+            if clicked == 1
+                selectObject: log
+                Set value: 1, 1, counter
+                Save as text file: log_file$
+                select all
+                Remove
+                exitScript: ""
+            endif
         else
             beginPause: ""
                 comment: "File " + string$ (counter) + " out of " + string$ (total_number_of_files) + " (" + percent$ + "% of files inspected)."
@@ -139,7 +147,13 @@ for i from 1 to number_of_files
     Remove
 
     selectObject: log
-    Set value: 1, 1, counter
+
+    if counter == total_number_of_files
+        Set value: 1, 1, counter + 1
+    else
+        Set value: 1, 1, counter
+    endif
+
     Save as text file: log_file$
 
     ## finish and clear  
