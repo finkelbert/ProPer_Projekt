@@ -45,7 +45,7 @@ Erase all
 ####### Settings
 #####################
 
-log_file$ = "log.TableOfReal"
+log_file$ = "praat_data/log.TableOfReal"
 log_exists = fileReadable (log_file$)
 
 if log_exists
