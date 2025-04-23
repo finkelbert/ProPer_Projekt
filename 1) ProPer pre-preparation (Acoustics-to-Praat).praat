@@ -40,53 +40,118 @@ form Input parameters
 endform
 Erase all
 
+
 #####################
 ####### Settings
 #####################
-## list files
-Create Strings as file list: "soundFileObj",  "'InDirAudio$'*.wav"
-number_of_files = Get number of strings
-for i from 1 to number_of_files
-	selectObject: "Strings soundFileObj"
-	current_file$ = Get string: 'i'
-	name_prefix$ = current_file$ - ".wav"
 
-## create intensity tiers
-	Read from file: "'InDirAudio$''current_file$'"
-		To Intensity: 40, 0.001, "yes"
-		Down to IntensityTier
-		Save as short text file: "'OutDirIntensityTier$''name_prefix$'.IntensityTier"
-		Remove
-		selectObject: "Intensity 'name_prefix$'"
-		Remove
+log_file$ = "log.TableOfReal"
+log_exists = fileReadable (log_file$)
 
-## create pitch object (to extract the periodic data)
-	selectObject: "Sound 'name_prefix$'"
-		To Pitch (raw autocorrelation): 0.001, 40, 800, 15, "yes", 0.03, 0.2, 0.02, 0.5, 0.14
-		Save as short text file: "'OutDirPitchObject$''name_prefix$'.Pitch"	
-		Remove
-
-## create pitch tier (manually inspect files if selected)
-if inspect = 1
-	selectObject: "Sound 'name_prefix$'"
-		View & Edit
-		To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
-		View & Edit
-		pause Confirm
-elsif inspect = 0
-	selectObject: "Sound 'name_prefix$'"
-		To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
+if log_exists
+    log = Read from file: log_file$
+else
+    log = Create TableOfReal: "log", 1, 1
+    Save as text file: log_file$
 endif
-		Smooth: smooth
-		Down to PitchTier
-		Save as short text file: "'OutDirPitchTier$''name_prefix$'.PitchTier"
-		Remove
 
-## finish and clear  
-  select all
-    minusObject: "Strings soundFileObj"
+position = Get value: 1, 1
+
+fileList = Create Strings as file list: "soundFileObj",  "'InDirAudio$'*.wav"
+total_number_of_files = Get number of strings
+number_of_files = total_number_of_files
+
+if position = total_number_of_files
+    beginPause: ""
+        comment: "It seems that you have already inspected all files."
+        comment: "Do you want to inspect everything again?"
+    clicked = endPause: "Yes", "No", 1, 0
+    if clicked == 1
+        position = 0
+    else
+        select all
+        Remove
+        exitScript: ""
+  endif
+endif
+
+counter = 0
+
+if position > 0
+    fileList = Extract part: position, total_number_of_files
+    number_of_files = Get number of strings
+    counter = position - 1
+endif
+
+for i from 1 to number_of_files
+    counter = counter + 1
+    selectObject: "Strings soundFileObj"
+    current_file$ = Get string: i
+    name_prefix$ = current_file$ - ".wav"
+
+    ## create intensity tiers
+    Read from file: "'InDirAudio$''current_file$'"
+    To Intensity: 40, 0.001, "yes"
+    Down to IntensityTier
+    Save as short text file: "'OutDirIntensityTier$''name_prefix$'.IntensityTier"
+    Remove
+    selectObject: "Intensity 'name_prefix$'"
     Remove
 
+    ## create pitch object (to extract the periodic data)
+	selectObject: "Sound 'name_prefix$'"
+    To Pitch (raw autocorrelation): 0.001, 40, 800, 15, "yes", 0.03, 0.2, 0.02, 0.5, 0.14
+    Save as short text file: "'OutDirPitchObject$''name_prefix$'.Pitch"	
+    Remove
+
+    ## create pitch object and tier (manually inspect files if selected)
+    if inspect = 1
+	    selectObject: "Sound 'name_prefix$'"
+        View & Edit
+        @getFilteredPitch
+        View & Edit
+        percent$ = fixed$ (((counter/total_number_of_files) * 100), 0)        
+        if counter == total_number_of_files
+            beginPause: ""
+                comment: "File " + string$ (counter) + " out of " + string$ (total_number_of_files) + " (" + percent$ + "% of files inspected)."
+            clicked = endPause: "Conclude", 1, 0
+        else
+            beginPause: ""
+                comment: "File " + string$ (counter) + " out of " + string$ (total_number_of_files) + " (" + percent$ + "% of files inspected)."
+            clicked = endPause: "Stop here", "Next file", 2, 1
+            if clicked == 1
+                selectObject: log
+                Set value: 1, 1, counter
+                Save as text file: log_file$
+                select all
+                Remove
+                exitScript: ""
+            endif
+        endif
+    elsif inspect = 0
+        selectObject: "Sound 'name_prefix$'"
+        @getFilteredPitch
+    endif
+
+    Smooth: smooth
+    Down to PitchTier
+    Save as short text file: "'OutDirPitchTier$''name_prefix$'.PitchTier"
+    Remove
+
+    selectObject: log
+    Set value: 1, 1, counter
+    Save as text file: log_file$
+
+    ## finish and clear  
+    select all
+    minusObject: "Strings soundFileObj", log
+    Remove
 endfor
+
+procedure getFilteredPitch
+    To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
+endproc
+
 select all
 Remove
+
