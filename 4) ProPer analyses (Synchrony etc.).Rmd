@@ -608,7 +608,7 @@ plot_comp <-
   ##### ∆F0 / F0 @ CoM
   geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*4, label=DeltaF0Label), check_overlap=T, color=brewer.pal(4, "PuOr")[4], size=1.5, family= "Helvetica") + 
 #  
-  geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*6, label=DeltaF0_meanF0Label), check_overlap=T, color="gold", size=1.5, family= "Helvetica") +
+  # geom_text(aes(x=CoM_corr, y=f0atCoM+plotUnits*6, label=DeltaF0_meanF0Label), check_overlap=T, color="gold", size=1.5, family= "Helvetica") +
 #  
   ##### Synchrony
   geom_text(aes(x=CoM_corr + (round(synchrony)/2), y=f0atCoG-plotUnits*4, label=syncLabel), check_overlap=T, color=brewer.pal(4, "PuOr")[3], size=1.5, family= "Helvetica") +
