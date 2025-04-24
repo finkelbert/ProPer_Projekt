@@ -8,11 +8,8 @@
 # OUTPUT:	Pitch objects, pitch tiers and intensity tiers.
 # NOTES:	This script creates the corresponding Praat objects (see "output") for 
 #			files in the audio directory ("input"). The extracted parameters in 
-#			pitch objects and intensity tiers are used in the R code to yield 
-#			periodic energy and F0 time series. To adjust the F0 path finding 
-#			algorithm in Praat without affecting the periodic energy measurement
-#			it is advised to only change the parameters in the fields of this 
-#			script's form. Select "inspect" to review and manually correct F0.
+#			the different Praat objects are used in the R code to yield periodic energy
+#			and F0 time series. Select "inspect" to review and manually correct F0.
 # IMPORTANT:	The script reads and writes files from a fixed folder structure
 #			within the same directory as the script file itself. You can manually 
 #			override these default locations in the path fields in the script below
