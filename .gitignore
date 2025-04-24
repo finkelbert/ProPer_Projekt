@@ -11,6 +11,9 @@ gitNo/
 *.html
 *.pdf
 
+# Praat analysis counter
+*.TableOfReal
+
 # Media files
 *.wav
 *.TextGrid
