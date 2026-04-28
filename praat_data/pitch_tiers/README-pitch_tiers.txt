@@ -1,1 +1,0 @@
-Folder for pitch tiers from Praat's output analysis.

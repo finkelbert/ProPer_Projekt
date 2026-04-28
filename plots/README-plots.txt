@@ -1,1 +1,0 @@
-Plots from R go in this folder.

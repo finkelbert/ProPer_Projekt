@@ -64,3 +64,6 @@ gitNo/
 # R Environment Variables
 .Renviron
 .Rproj.user
+
+praat_dsp
+test

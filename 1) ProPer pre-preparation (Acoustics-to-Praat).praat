@@ -21,43 +21,63 @@
 #####################
 ####### Input form
 #####################
-form Input parameters
-      comment Change file paths below only if you need to override the default file locations
-        sentence InDirAudio audio/
-        sentence OutDirPitchObject	praat_data/pitch_objects/
-        sentence OutDirPitchTier praat_data/pitch_tiers/
-        sentence OutDirIntensityTier praat_data/intensity_tiers/
-      comment Manually inspect F0 for corrections?
-        boolean inspect 1
-      comment F0 path finder settings (adjustable)
-        integer pitchmax 800
-        real voicingThr 0.5
-      comment F0 smoothing bandwidth (Hz)
-        integer smooth 12
-endform
-Erase all
 
+form Input parameters
+    comment: "Change file paths below only if you need to override the default file locations"
+    sentence: "InDirAudio", "audio/"
+    comment: "Manually inspect F0 for corrections?"
+    boolean: "inspect", "1"
+    comment: "F0 path finder settings (adjustable)"
+    integer: "pitchmax", "800"
+    real: "voicingThr", "0.5"
+    comment: "F0 smoothing bandwidth (Hz)"
+    integer: "smooth", "12"
+endform
+
+Erase all
 
 #####################
 ####### Settings
 #####################
 
-log_file$ = "praat_data/log.TableOfReal"
+# ----- Create folders (if they do not exist) ----------------------
+
+praat_dsp$ = "praat_dsp/"
+createFolder: praat_dsp$
+
+pitch_folder$ = praat_dsp$ + "pitch/"
+createFolder: pitch_folder$
+
+pitchtier_folder$ = praat_dsp$ + "pitchtier/"
+createFolder: pitchtier_folder$
+
+intensity_folder$ = praat_dsp$ + "intensity/"
+createFolder: intensity_folder$
+
+# ----- Logging ----------------------------------------------------
+
+log_file$ = praat_dsp$ + "log.TableOfReal"
 log_exists = fileReadable (log_file$)
 
 if log_exists
+    # Read exiting log
     log = Read from file: log_file$
 else
+    # Create log file
     log = Create TableOfReal: "log", 1, 1
     Save as text file: log_file$
 endif
 
+# ----- Get position -----------------------------------------------
+
+# Get position of the next file to be inspected
 position = Get value: 1, 1
 
-fileList = Create Strings as file list: "soundFileObj",  "'InDirAudio$'*.wav"
+# Load list of files
+fileList = Create Strings as file list: "fileList", inDirAudio$ + "*.wav"
 total_number_of_files = Get number of strings
-number_of_files = total_number_of_files
 
+# Check if all files have already been inspected
 if position = total_number_of_files + 1
     beginPause: ""
         comment: "It seems that you have already inspected all files."
@@ -78,36 +98,42 @@ if position > 0
     fileList = Extract part: position, total_number_of_files
     number_of_files = Get number of strings
     counter = position - 1
+else
+    number_of_files = total_number_of_files
 endif
+
+# ----- Iteration over pairs of audio and TextGrid -------------------------------
 
 for i from 1 to number_of_files
     counter = counter + 1
     selectObject: fileList
     current_file$ = Get string: i
     name_prefix$ = current_file$ - ".wav"
+    audio = Read from file: inDirAudio$ + current_file$
 
-    ## create intensity tiers
-    Read from file: "'InDirAudio$''current_file$'"
+    # ----- Create IntensityTier -----
     To Intensity: 40, 0.001, "yes"
     Down to IntensityTier
-    Save as short text file: "'OutDirIntensityTier$''name_prefix$'.IntensityTier"
-    Remove
-    selectObject: "Intensity 'name_prefix$'"
-    Remove
+    Save as short text file: intensity_folder$ + name_prefix$ + ".IntensityTier"
 
-    ## create pitch object (to extract the periodic data)
-	selectObject: "Sound 'name_prefix$'"
-    To Pitch (raw autocorrelation): 0.001, 40, 800, 15, "yes", 0.03, 0.2, 0.02, 0.5, 0.14
-    Save as short text file: "'OutDirPitchObject$''name_prefix$'.Pitch"	
-    Remove
+    # ----- Create raw Pitch -----
+    selectObject: audio
+    raw_pitch = To Pitch (raw autocorrelation): 0.001, 40, 800, 15, "yes", 0.03, 0.2, 0.02, 0.5, 0.14
+    Save as short text file: pitch_folder$ + name_prefix$ + ".Pitch"
 
-    ## create pitch object and tier (manually inspect files if selected)
+    # ----- Create filtered Pitch and PitchTier ----
     if inspect = 1
-	    selectObject: "Sound 'name_prefix$'"
+
+        # Open SoundEditor
+	    selectObject: audio
         View & Edit
-        @getFilteredPitch
+
+        # Create Pitch and open PitchEditor
+        To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
         View & Edit
-        percent$ = fixed$ (((counter/total_number_of_files) * 100), 0)        
+
+        percent$ = fixed$ (((counter/total_number_of_files) * 100), 0)
+
         if counter == total_number_of_files
             beginPause: ""
                 comment: "File " + string$ (counter) + " out of " + string$ (total_number_of_files) + " (" + percent$ + "% of files inspected)."
@@ -134,14 +160,16 @@ for i from 1 to number_of_files
             endif
         endif
     elsif inspect = 0
-        selectObject: "Sound 'name_prefix$'"
-        @getFilteredPitch
+        selectObject: sound
+        To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
     endif
 
+    # Smooth Pitch object and create PitchTier of smoothed Pitch
     Smooth: smooth
     Down to PitchTier
-    Save as short text file: "'OutDirPitchTier$''name_prefix$'.PitchTier"
-    Remove
+    Save as short text file: pitchtier_folder$ + name_prefix$ + ".PitchTier"
+
+    # ----- Update log file -----
 
     selectObject: log
 
@@ -153,16 +181,14 @@ for i from 1 to number_of_files
 
     Save as text file: log_file$
 
-    ## finish and clear  
+    # ----- Clear all objects of current iteration -----
+
     select all
     minusObject: fileList, log
     Remove
+
 endfor
 
-procedure getFilteredPitch
-    To Pitch (filtered autocorrelation): 0.001, 40, pitchmax, 15, "yes", 0.5, 0.09, voicingThr, 0.055, 0.35, 0.14
-endproc
-
+# ----- Clear everything -----
 select all
 Remove
-
