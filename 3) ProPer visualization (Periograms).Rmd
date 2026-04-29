@@ -13,23 +13,98 @@ require(seewave)
 require(imputeTS)
 require(RColorBrewer)
 
-## Read the previous table: raw_df
-raw_df <- read.csv("data_tables/raw_df.csv") %>% distinct(file, t, .keep_all = TRUE)
+setwd("~/repos/ProPer_Projekt3/ProPer_Projekt/")
 
+source("functions.R")
+
+## Read the previous table: raw_df
+raw_df <- praat_to_table("test/textgrids/")
+  
 ## Switch to current table: main_df
 main_df <- droplevels(raw_df)
 
 ## Calculate total-power and periodic-power
-main_df <- mutate(group_by(main_df,file),
-                  totalPower = round(4e-10 * 10^(intensity / 10), 9),
-                  periodicPower = round(totalPower * periodicStrength, 9)
-                  )
+main_df <- main_df |>
+  group_by(file) |>
+  mutate(totalPower = round(4e-10 * 10^(intensity_dB / 10), 9),
+         periodicPower = round(totalPower * periodicity_index, 9))
 
-## get the filemames list 
+## get the file names list 
 files <- main_df$file
-files <- files[!duplicated(files)==TRUE]
+files <- files[!duplicated(files) == TRUE]
 
 ```
+
+TODO: Extract variables from file names!
+
+```{r}
+## F0 interpolating: mutate by token
+main_df <- main_df |>
+  group_by(file) |>
+  mutate(
+    f0_smerp = na_interpolation(f0_Hz, option = "stine"),
+    f0_smoorp = round(
+      bwfilter(wave = f0_smerp,
+               f = 1000,
+               to = 6,
+               n = 1,
+               output = "Sample"), 
+      3)
+    ) |>
+  ungroup()
+```
+
+
+```{r}
+main_df <- main_df |>
+  group_by(file) |>
+  mutate(
+    periodic_energy = get_periodic_energy(
+      intensity_dB,
+      periodicity_index,
+      perfloor = 0.01,
+      threshold = 0.25
+      )
+    ) |>
+  ungroup()
+```
+
+
+```{r}
+ggplot(main_df |> filter(file == "AH_1"), aes(x = time, y = periodicity_index)) +
+  geom_path()
+```
+
+```{r}
+ggplot(main_df |> filter(file == "AH_1"), aes(x = time, y = periodic_energy)) +
+  geom_path()
+```
+```{r}
+hz_to_ome <- function(x) {
+  log2(x/median(x, na.rm = TRUE))
+}
+```
+
+```{r}
+main_df <- main_df |>
+  group_by(file) |>
+  mutate(f0_OMe = hz_to_ome(f0_Hz)) |>
+  ungroup()
+```
+
+```{r}
+ggplot(main_df |> filter(file == "AH_1"), aes(x = time, y = f0_Hz)) +
+  geom_path()  +
+  scale_y_continuous(limits = c(100, 300))
+
+ggplot(main_df |> filter(file == "AH_1"), aes(x = time, y = f0_OMe)) +
+    geom_hline(yintercept = 1, linetype = 2) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_hline(yintercept = -0.5, linetype = 2) +
+  geom_path() +
+  scale_y_continuous(limits = c(-0.5, 1))
+```
+
 
 ## Prepare periodic energy & F0 curves:
 
