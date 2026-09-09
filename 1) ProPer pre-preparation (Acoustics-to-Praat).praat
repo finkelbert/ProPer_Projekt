@@ -88,7 +88,7 @@ for i from 1 to number_of_files
 
     ## create intensity tiers
     Read from file: "'InDirAudio$''current_file$'"
-    To Intensity: 40, 0.001, "yes"
+    To Intensity: 60, 0.001, "yes"
     Down to IntensityTier
     Save as short text file: "'OutDirIntensityTier$''name_prefix$'.IntensityTier"
     Remove
