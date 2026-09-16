@@ -116,12 +116,11 @@ if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
   group_by(textGridSyll_df,file),
   syll_bounds = ifelse(
     (is.na(syll_bounds) & !is.na(lag(syll_end,1))),
-    lag(syll_end,1), 
+    lag(syll_end,1)+1, 
     syll_bounds),
-  # t = syll_bounds
   )
 #
-if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(t))
+if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(syll_bounds))
 
 # take a look:
 # TexGriEx <- tg.read(files_textGrid[1], encoding = "auto")
@@ -148,12 +147,11 @@ if(exists("textGridWord_df")) textGridWord_df <- mutate(
   group_by(textGridWord_df,file),
   word_bounds = ifelse(
     (is.na(word_bounds) & !is.na(lag(word_end,1))),
-    lag(word_end,1), 
+    lag(word_end,1)+1, 
     word_bounds),
-  # t = word_bounds
   )
 #
-if(exists("textGridWord_df")) textGridWord_df <- dplyr::filter(textGridWord_df, !is.na(t))
+if(exists("textGridWord_df")) textGridWord_df <- dplyr::filter(textGridWord_df, !is.na(word_bounds))
   
 ```
 
