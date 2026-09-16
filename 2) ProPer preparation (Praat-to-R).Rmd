@@ -110,17 +110,18 @@ if(length(files_textGrid)>0) textGridSyll_df <- plyr::ldply(files_textGrid, func
   t2 <- ifelse(syll_tier$label=="", NA, round(syll_tier$t2,4)*1000)
   t_mid <- round((t1+t2)/2)
   syll_label <- syll_tier$label
-  data.frame(file, syll_start=as.integer(as.character(t1)), syll_mid=as.integer(as.character(t_mid)), syll_end=as.integer(as.character(t2))-1, syll_bounds=as.integer(as.character(t1)), syll_label)
+  data.frame(file, syll_start=as.integer(as.character(t1)), syll_mid=as.integer(as.character(t_mid)), syll_end=as.integer(as.character(t2))-1, syll_label) #syll_bounds=as.integer(as.character(t1)), 
 })
-if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
-  group_by(textGridSyll_df,file),
-  syll_bounds = ifelse(
-    (is.na(syll_bounds) & !is.na(lag(syll_end,1))),
-    lag(syll_end,1)+1, 
-    syll_bounds),
-  )
+# if(exists("textGridSyll_df")) textGridSyll_df <- mutate(
+#   group_by(textGridSyll_df,file),
+#   syll_bounds = ifelse(
+#     (is.na(syll_bounds) & !is.na(lag(syll_end,1))),
+#     lag(syll_end,1)+1, 
+#     syll_bounds),
+#   t = syll_bounds
+#   )
 #
-if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(syll_bounds))
+if(exists("textGridSyll_df")) textGridSyll_df <- dplyr::filter(textGridSyll_df, !is.na(syll_start))
 
 # take a look:
 # TexGriEx <- tg.read(files_textGrid[1], encoding = "auto")
@@ -141,17 +142,18 @@ if(length(files_textGrid)>0) textGridWord_df <- plyr::ldply(files_textGrid, func
   word_t2 <- ifelse(word_tier$label=="", NA, round(word_tier$t2,3)*1000)
   word_t_mid <- round((word_t1+word_t2)/2)
   word_label <- word_tier$label
-  data.frame(file, word_start=as.integer(as.character(word_t1)), word_mid=as.integer(as.character(word_t_mid)), word_end=as.integer(as.character(word_t2))-1, word_bounds=as.integer(as.character(word_t1)), word_label)
+  data.frame(file, word_start=as.integer(as.character(word_t1)), word_mid=as.integer(as.character(word_t_mid)), word_end=as.integer(as.character(word_t2))-1, word_label)# word_bounds=as.integer(as.character(word_t1)), 
 })
-if(exists("textGridWord_df")) textGridWord_df <- mutate(
-  group_by(textGridWord_df,file),
-  word_bounds = ifelse(
-    (is.na(word_bounds) & !is.na(lag(word_end,1))),
-    lag(word_end,1)+1, 
-    word_bounds),
-  )
+# if(exists("textGridWord_df")) textGridWord_df <- mutate(
+#   group_by(textGridWord_df,file),
+#   word_bounds = ifelse(
+#     (is.na(word_bounds) & !is.na(lag(word_end,1))),
+#     lag(word_end,1)+1, 
+#     word_bounds),
+#   t = word_bounds
+#   )
 #
-if(exists("textGridWord_df")) textGridWord_df <- dplyr::filter(textGridWord_df, !is.na(word_bounds))
+if(exists("textGridWord_df")) textGridWord_df <- dplyr::filter(textGridWord_df, !is.na(word_start))
   
 ```
 
@@ -164,26 +166,43 @@ raw_df <- left_join(fullTime_df, f0_smooth_df, by = c("file", "t"))
 raw_df <- left_join(raw_df, intensity_df, by = c("file", "t"))
 raw_df <- left_join(raw_df, pitchObject_df, by = c("file", "t"))
 
-# combine with textgrid annotations
+# combine with textgrid intervals
 if(exists("textGridSyll_df")) raw_df <- fuzzy_left_join(
   raw_df, textGridSyll_df,
   by = c("file" = "file", "t" = "syll_start", "t" = "syll_end"),
   match_fun = list(`==`, `>=`, `<=`)) 
 # get rid of residues (.y)
-raw_df <- droplevels(subset(raw_df, select = -file.y))#, syll_start, syll_mid, syll_end)))
+if(exists("textGridSyll_df")) raw_df <- droplevels(subset(raw_df, select = -file.y))
 # rename residual names (.x)
-raw_df <- raw_df %>%
+if(exists("textGridSyll_df")) raw_df <- raw_df %>%
   rename(file = file.x)
+# add the syllable bounds
+if(exists("textGridSyll_df")) raw_df <- mutate(
+  group_by(raw_df,file),
+  syll_bounds = ifelse(
+    (is.na(syll_end) & !is.na(lag(syll_end,1))),
+    lag(syll_end,1)+1, 
+    syll_start)
+  )
 ###############################
 if(exists("textGridWord_df")) raw_df <- fuzzy_left_join(
   raw_df, textGridWord_df,
   by = c("file" = "file", "t" = "word_start", "t" = "word_end"),
   match_fun = list(`==`, `>=`, `<=`)) 
 # get rid of residues (.y)
-raw_df <- droplevels(subset(raw_df, select = -file.y))#, syll_start, syll_mid, syll_end)))
+if(exists("textGridWord_df")) raw_df <- droplevels(subset(raw_df, select = -file.y))# -c(file.y, t.y)
 # rename residual names (.x)
-raw_df <- raw_df %>%
-  rename(file = file.x)
+if(exists("textGridWord_df")) raw_df <- raw_df %>%
+  rename(file = file.x)#, t = t.x)
+# add the word bounds
+if(exists("textGridWord_df")) raw_df <- mutate(
+  group_by(raw_df,file),
+  word_bounds = ifelse(
+    (is.na(word_end) & !is.na(lag(word_end,1))),
+    lag(word_end,1)+1, 
+    word_start)
+  )
+
 #
 
 ```
